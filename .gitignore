@@ -1,0 +1,5 @@
+firmware/casa_inteligente/secrets.h
+servidor/.dev.vars
+servidor/node_modules/
+servidor/.wrangler/
+servidor/dist/

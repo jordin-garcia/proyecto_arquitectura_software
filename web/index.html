@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f8f7e">
+  <title>Casa IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="barra">
+    <div class="marca"><i data-icono="casa"></i><span>Casa IA</span></div>
+    <div class="conexiones">
+      <button id="btnWifi" class="chip" data-estado="desconectado" title="Conexión por internet (WiFi)">
+        <i data-icono="wifi"></i><span>WiFi</span>
+      </button>
+      <button id="btnBle" class="chip" data-estado="desconectado" title="Conectar por Bluetooth">
+        <i data-icono="bluetooth"></i><span>Bluetooth</span>
+      </button>
+    </div>
+    <div class="modo" role="group" aria-label="Modo de la casa">
+      <button id="modoAuto" class="segmento" type="button">Automático</button>
+      <button id="modoManual" class="segmento" type="button">Manual</button>
+    </div>
+    <button id="btnAjustes" class="icono-btn" type="button" aria-label="Ajustes" title="Ajustes"><i data-icono="ajustes"></i></button>
+  </header>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+  <main class="contenido">
+    <section id="panelCasa" class="panel-casa">
+      <div id="alertaAlarma" class="alerta-alarma" role="alert" hidden>
+        <i data-icono="campana"></i>
+        <div class="alerta-texto">
+          <strong id="alertaTitulo">¡Persona detectada! La alarma está sonando</strong>
+          <span id="alertaDetalle">El sensor de movimiento detectó a alguien durante más de 5 segundos.</span>
+        </div>
+        <button id="btnSilenciar" type="button" class="boton">Desactivar alarma</button>
+      </div>
+
+      <div class="seccion-titulo">
+        <h2>Sensores</h2>
+        <button id="btnDemoPersona" type="button" class="boton-sec" hidden>Simular una persona</button>
+        <span id="frescura" class="frescura">Sin datos</span>
+      </div>
+      <div id="sensores" class="grid-sensores"></div>
+
+      <div class="seccion-titulo">
+        <h2>Dispositivos</h2>
+        <span id="notaModo" class="nota-modo"></span>
+      </div>
+      <div id="dispositivos" class="grid-dispositivos"></div>
+
+      <div class="fila-2">
+        <section class="tarjeta">
+          <h3>Últimos 5 minutos</h3>
+          <div class="grafica"><canvas id="grafica" aria-label="Gráfica de temperatura y humedad del suelo"></canvas></div>
+        </section>
+        <section class="tarjeta">
+          <h3>Reglas personalizadas</h3>
+          <ul id="reglas" class="reglas"></ul>
+          <p class="pista">Pídele a Aurora que cree reglas, por ejemplo: “después de las 10 de la noche apaga el foco exterior”. Funcionan en modo automático, incluso sin internet.</p>
+        </section>
+      </div>
+
+      <section class="tarjeta">
+        <h3>Alertas de la alarma</h3>
+        <ul id="historialAlertas" class="reglas"></ul>
+        <label class="pista opcion-notif"><input type="checkbox" id="optNotificaciones"> Avisarme también con notificaciones del navegador</label>
+      </section>
+
+      <section class="tarjeta">
+        <h3>Umbrales de automatización</h3>
+        <form id="formUmbrales" class="umbrales">
+          <div id="camposUmbrales" class="campos-umbrales"></div>
+          <button type="submit" class="boton">Guardar cambios</button>
+        </form>
+      </section>
+    </section>
+
+    <aside id="panelAsistente" class="panel-asistente">
+      <div class="asistente-cabecera">
+        <div id="orbe" class="orbe" data-estado="reposo" aria-hidden="true"><span></span></div>
+        <div class="asistente-nombre">
+          <h2>Aurora</h2>
+          <p id="estadoAsistente">Lista para ayudarte</p>
+        </div>
+        <button id="btnNueva" class="icono-btn" type="button" aria-label="Nueva conversación" title="Nueva conversación"><i data-icono="nueva"></i></button>
+      </div>
+
+      <div id="chat" class="chat" aria-live="polite"></div>
+
+      <div id="sugerencias" class="sugerencias">
+        <button type="button">¿Cómo está la casa?</button>
+        <button type="button">Activa el modo noche</button>
+        <button type="button">Enciende el foco de la sala</button>
+        <button type="button">Me voy de la casa</button>
+      </div>
+
+      <form id="formChat" class="entrada">
+        <button type="button" id="btnMic" class="mic" aria-label="Hablar con Aurora"><i data-icono="microfono"></i></button>
+        <input id="textoChat" autocomplete="off" placeholder="Escribe o toca el micrófono…" aria-label="Mensaje para Aurora">
+        <button type="submit" class="enviar" aria-label="Enviar"><i data-icono="enviar"></i></button>
+      </form>
+      <div class="opciones-voz">
+        <label><input type="checkbox" id="optVoz" checked> Responder con voz</label>
+        <label><input type="checkbox" id="optContinua"> Conversación continua</label>
+      </div>
+    </aside>
+  </main>
+
+  <nav class="pestanas" aria-label="Secciones">
+    <button type="button" data-panel="casa" class="activa"><i data-icono="casa"></i>Casa</button>
+    <button type="button" data-panel="asistente"><i data-icono="chispa"></i>Aurora</button>
+  </nav>
+
+  <dialog id="dlgAjustes" class="dialogo">
+    <form id="formAjustes" method="dialog">
+      <h2>Ajustes de conexión</h2>
+      <p class="pista">Se guardan solo en este navegador. No se suben a GitHub.</p>
+      <fieldset>
+        <legend>Casa por WiFi (HiveMQ Cloud)</legend>
+        <label>Servidor MQTT (WebSocket)
+          <input name="mqttUrl" placeholder="wss://xxxx.s1.eu.hivemq.cloud:8884/mqtt" inputmode="url">
+        </label>
+        <div class="dos-columnas">
+          <label>Usuario<input name="mqttUsuario" autocomplete="off"></label>
+          <label>Clave<input name="mqttClave" type="password" autocomplete="off"></label>
+        </div>
+        <label>ID de la casa<input name="idCasa" placeholder="casa01"></label>
+      </fieldset>
+      <fieldset>
+        <legend>Asistente (Cloudflare Worker)</legend>
+        <label>Dirección del servidor
+          <input name="servidorUrl" placeholder="https://casa-ia-asistente.su-cuenta.workers.dev" inputmode="url">
+        </label>
+        <label>Código de acceso<input name="codigoAcceso" type="password" autocomplete="off"></label>
+      </fieldset>
+      <div class="acciones">
+        <button type="button" id="btnCancelarAjustes" class="boton secundario">Cancelar</button>
+        <button type="submit" value="guardar" class="boton">Guardar y conectar</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

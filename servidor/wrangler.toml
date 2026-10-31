@@ -1,0 +1,13 @@
+name = "casa-ia-asistente"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Cambien "*" por la direccion de su pagina, por ejemplo "https://su-usuario.github.io"
+ORIGEN_PERMITIDO = "*"
+
+# Secretos (NO se escriben aqui). Se configuran con:
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put CODIGO_ACCESO
+# Para pruebas locales, creen el archivo .dev.vars (ver .dev.vars.example)

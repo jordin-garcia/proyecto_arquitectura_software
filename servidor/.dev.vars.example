@@ -1,0 +1,3 @@
+# Copien este archivo como .dev.vars para probar con "npm run dev". No se sube a GitHub.
+ANTHROPIC_API_KEY=su-clave-de-la-claude-console
+CODIGO_ACCESO=una-frase-secreta-del-equipo
