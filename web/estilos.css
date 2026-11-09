@@ -1393,4 +1393,18 @@ body.listo .lateral > button:nth-child(6) { animation-delay: .25s; } body.listo 
      Los iconos conservan su color; las tarjetas, su borde iluminado. */
   .disp .d-icono, .logo-casa, .panel-icono .icono, .escena .icono,
   .esp-item .icono, .pie-estado .icono { filter: none !important; }
+
+  /* Tarjetas sin efectos: colores solidos, sin degradados ni sombras. Las capas
+     semitransparentes sobre el fondo animado se dibujaban con bloques de otro tono. */
+  :root { --panel-a: rgb(7, 23, 55); --panel-b: rgb(7, 23, 55); --tarjeta: rgb(12, 38, 84); }
+  .panel { background: rgb(7, 23, 55); box-shadow: none; }
+  .panel::before { display: none; }
+  .disp, .sensor, .escena { background: rgb(12, 38, 84); box-shadow: none; transform: none !important; }
+  .disp.encendido { background: rgb(17, 62, 128); box-shadow: none; }
+  .disp.sonando { background: rgb(70, 14, 34); box-shadow: none; }
+  .escena.activa { background: rgb(22, 110, 230); box-shadow: none; }
+  .sensor[data-sensor="presencia"] { background: rgb(10, 50, 52); }
+  .sensor[data-sensor="presencia"].hay { background: rgb(62, 46, 16); }
+  .sensor[data-sensor="presencia"].peligro { background: rgb(70, 14, 34); box-shadow: none; }
+  .sensor.alerta { box-shadow: none; }
 }

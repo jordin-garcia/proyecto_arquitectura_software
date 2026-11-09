@@ -24,15 +24,20 @@ export function escuchar(alParcial) {
     rec.interimResults = true;
     rec.continuous = false;
     let final = "";
+    let ultimoParcial = "";
     let fallo = null;
 
     rec.onresult = (e) => {
-      let parcial = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      // Se recalcula con todos los resultados: en Android el mismo resultado
+      // final puede llegar dos veces y sumarlo duplicaba la frase.
+      let fin = "", parcial = "";
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) fin += e.results[i][0].transcript;
         else parcial += e.results[i][0].transcript;
       }
-      alParcial?.((final + " " + parcial).trim());
+      final = fin;
+      ultimoParcial = (fin + " " + parcial).trim();
+      alParcial?.(ultimoParcial);
     };
     rec.onerror = (e) => {
       if (e.error === "language-not-supported" && idiomas.length > 1) idiomas = idiomas.slice(1);
@@ -42,7 +47,8 @@ export function escuchar(alParcial) {
     rec.onend = () => {
       if (reconocedor === rec) reconocedor = null;
       if (fallo) rechazar(fallo);
-      else resolver(final.trim());
+      // Si termino sin resultado final (pasa en algunos Android), se usa lo ultimo que se oyo
+      else resolver(final.trim() || ultimoParcial);
     };
     rec.start();
   });

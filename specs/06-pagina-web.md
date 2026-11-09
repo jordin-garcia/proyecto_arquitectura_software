@@ -213,7 +213,8 @@ Si `servidorUrl` está vacío, `local.js` entiende órdenes sencillas: encender 
 - el fondo de partículas dibuja a 1× con 50 partículas como máximo;
 - el lienzo solo se rehace si cambia el ancho, no cuando la barra de direcciones cambia la altura al deslizar;
 - se quita el destello que recorre el borde de los paneles;
-- los íconos que se redibujan con los datos del ESP32 (dispositivos, paneles, escenas, conexión) y el logo no usan `filter: drop-shadow`: en Chrome de Android se pintaba como un rectángulo negro fijo sobre el foco encendido.
+- los íconos que se redibujan con los datos del ESP32 (dispositivos, paneles, escenas, conexión) y el logo no usan `filter: drop-shadow`: en Chrome de Android se pintaba como un rectángulo negro fijo sobre el foco encendido;
+- paneles y tarjetas usan colores sólidos, sin degradados, sombras ni el brillo que sigue al dedo: las capas semitransparentes sobre el fondo animado se dibujaban con bloques de otro tono.
 
 ## 6.5 Ciclo de vida
 
@@ -249,11 +250,11 @@ Si `servidorUrl` está vacío, `local.js` entiende órdenes sencillas: encender 
 
 | Función | Detalle |
 |---|---|
-| Reconocimiento | `SpeechRecognition` / `webkitSpeechRecognition`. Idioma `es-GT`; si no está disponible, `es-MX` y después `es-ES`. Resultados parciales; una frase por vez. |
+| Reconocimiento | `SpeechRecognition` / `webkitSpeechRecognition`. Idioma `es-GT`; si no está disponible, `es-MX` y después `es-ES`. Resultados parciales; una frase por vez. El texto se recalcula con todos los resultados (en Android el final puede llegar repetido) y, si termina sin resultado final, se usa el último parcial. |
 | Errores | `not-allowed` → "Permite el uso del micrófono…". Se ignoran `no-speech` y `aborted`. |
 | Síntesis | `speechSynthesis` a velocidad 1.05. Prefiere voces "Google", "Natural" u "Online", de español latinoamericano y femeninas. |
 | Cola | Las respuestas se leen en orden; un mensaje nuevo calla la voz anterior. |
-| Nivel del micrófono | `medirMicrofono` usa `getUserMedia` y un `AnalyserNode` para que MIA y las ondas sigan el volumen. Si no hay permiso, se usa una onda simulada. |
+| Nivel del micrófono | En computadora, `medirMicrofono` usa `getUserMedia` y un `AnalyserNode` para que MIA y las ondas sigan el volumen. **En celulares y tabletas no se usa:** el micrófono no se comparte y el reconocimiento recibía silencio (9 nov 2026). Ahí MIA se anima con cada texto parcial reconocido. |
 | Boca de MIA | `hablar(texto, alPalabra)` llama a `alPalabra` en cada evento `boundary` de la síntesis. |
 | Compatibilidad | Probado en Chrome y Edge en PC y Android. Si no hay reconocimiento, el micrófono lo avisa y ofrece escribir. |
 

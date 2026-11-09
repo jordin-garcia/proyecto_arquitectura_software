@@ -16,6 +16,9 @@ import { interpretar } from "./local.js";
 
 const $ = (id) => document.getElementById(id);
 const reducirMovimiento = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// En celulares y tabletas el microfono no se comparte: si el medidor de volumen
+// lo abre, el reconocimiento de voz recibe silencio y no llega ningun texto.
+const microfonoExclusivo = matchMedia("(hover: none) and (pointer: coarse)").matches;
 const esDemo = new URLSearchParams(location.search).has("demo");
 const esperarMs = (ms) => new Promise((r) => setTimeout(r, ms));
 const horaCorta = () => new Date().toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -370,15 +373,23 @@ async function iniciarEscucha() {
   marcarMic(true);
   ponerEstadoMia("escuchando");
   mostrarTexto("Te escucho…");
-  medirMicrofono((n) => { mia.ponerNivel(n); miaChat?.ponerNivel(n); }).then((detener) => {
-    if (escuchandoAhora) detenerMedidor = detener;
-    else detener();
-  });
+  if (!microfonoExclusivo) {
+    medirMicrofono((n) => { mia.ponerNivel(n); miaChat?.ponerNivel(n); }).then((detener) => {
+      if (escuchandoAhora) detenerMedidor = detener;
+      else detener();
+    });
+  }
   let texto = "";
+  let pulso = 0;
   try {
     texto = await escuchar((parcial) => {
       mostrarTexto(parcial, { usuario: true });
       $("textoChat").value = parcial;
+      if (microfonoExclusivo) {   // sin medidor: MIA se anima con cada palabra reconocida
+        mia.ponerNivel(0.6);
+        clearTimeout(pulso);
+        pulso = setTimeout(() => mia.ponerNivel(0.15), 180);
+      }
     });
   } catch (e) {
     reaccionMia("error", 1500);
