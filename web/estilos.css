@@ -1373,3 +1373,19 @@ body.listo .lateral > button:nth-child(6) { animation-delay: .25s; } body.listo 
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .mia-orbita .luna { display: none; }
 }
+
+/* Telefonos y tabletas: sin vidrio desenfocado ni destellos continuos.
+   En Chrome de Android, desenfocar el fondo animado agotaba la memoria grafica
+   y la pantalla parpadeaba en negro al deslizar. Los fondos quedan casi opacos. */
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+  .cabecera { background: rgb(3, 11, 29); }
+  .tabs-movil { background: rgb(6, 22, 54); }
+  .aviso { background: rgb(6, 24, 58); }
+  .chip-sug { background: rgba(12, 42, 96, .94); }
+  .pastilla-hablar { background: rgba(14, 44, 100, .95); }
+  .alerta-alarma { background: linear-gradient(135deg, rgba(120, 10, 40, .97), rgba(60, 4, 24, .97)); }
+  .cabecera, .resultados, .desplegable, .chip-sug, .pastilla-hablar, .alerta-alarma,
+  .conversacion, .velo, .aviso, .lateral, .tabs-movil, .dialogo::backdrop { backdrop-filter: none; }
+  .panel::after { display: none; animation: none; }
+  .mia-energia { mix-blend-mode: normal; }
+}

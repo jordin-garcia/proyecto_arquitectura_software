@@ -14,7 +14,7 @@
 | Amenaza | Control | Dónde |
 |---|---|---|
 | Robo de la clave de la API | Solo vive como secreto en Cloudflare; nunca en la página, el ESP32 ni el repositorio | `servidor/`, `.gitignore` |
-| Uso del Worker por terceros | Código de acceso en `X-Codigo-Acceso`; CORS y verificación de `Origin` cuando `ORIGEN_PERMITIDO` es la dirección de la página | `src/index.js` |
+| Uso del Worker por terceros | Código de acceso en `X-Codigo-Acceso`; CORS y verificación de `Origin` con `ORIGEN_PERMITIDO` limitado a la página publicada, GitHub Pages y la prueba local | `src/index.js` |
 | Peticiones enormes o malformadas al Worker | Límite de 400 000 caracteres y 120 mensajes; roles válidos; el primero debe ser `user` | `src/index.js` |
 | Credenciales en el repositorio | `secrets.h`, `.dev.vars`, `node_modules`, `.wrangler` y `dist` en `.gitignore`; los ajustes de la página solo en `localStorage` | `.gitignore`, `app.js` |
 | La IA pide algo fuera de rango | Tres capas: esquema `strict` → validación en la página (`modelo.js`) → validación en el ESP32 (`aplicarUmbral`, `reglaDesdeJson`, `limitarValor`) | [04](04-firmware.md), [07](07-asistente-mia.md) |

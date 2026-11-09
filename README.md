@@ -144,7 +144,7 @@ npx wrangler deploy
 ```
 - `CODIGO_ACCESO` es una frase secreta del equipo; la página la pide para poder usar la asistente.
 - Al final, Wrangler muestra la dirección del servidor (`https://casa-ia-asistente.SU-CUENTA.workers.dev`).
-- Cuando la página esté publicada (paso 5), cambien `ORIGEN_PERMITIDO` en `servidor/wrangler.toml` por la dirección de la página y vuelvan a ejecutar `npx wrangler deploy`.
+- `ORIGEN_PERMITIDO` en `servidor/wrangler.toml` es la lista de direcciones que pueden usar a MIA, separadas por comas. Si la página cambia de dirección, agréguenla y vuelvan a ejecutar `npx wrangler deploy`.
 - Para probar en su PC: copien `.dev.vars.example` como `.dev.vars` y ejecuten `npm run dev`. Si npm avisa sobre *install scripts*, ejecuten `npm install-scripts approve esbuild workerd`.
 
 ### 5. Página web (GitHub Pages)

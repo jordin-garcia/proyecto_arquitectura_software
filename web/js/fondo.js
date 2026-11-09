@@ -2,19 +2,21 @@
 export function iniciarFondo(canvas) {
   const ctx = canvas.getContext("2d");
   const reducir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Telefonos y tabletas: menos resolucion y particulas para no agotar la memoria grafica
+  const tactil = matchMedia("(hover: none) and (pointer: coarse)").matches;
   let w = 0, h = 0, puntos = [], cuadro = 0;
   const raton = { x: -9999, y: -9999 };
   let color = [53, 214, 255];
   let colorMeta = color;
 
   function medir() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = tactil ? 1 : Math.min(window.devicePixelRatio || 1, 2);
     w = window.innerWidth;
     h = window.innerHeight;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const n = Math.round(Math.min(120, (w * h) / 13000));
+    const n = Math.round(Math.min(tactil ? 50 : 120, (w * h) / 13000));
     puntos = Array.from({ length: n }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
@@ -80,8 +82,17 @@ export function iniciarFondo(canvas) {
   }
 
   medir();
+  let anchoMedido = window.innerWidth;
   cuadro = requestAnimationFrame(dibujar);
-  window.addEventListener("resize", () => { medir(); if (reducir) dibujar(0); });
+  window.addEventListener("resize", () => {
+    // En el celular la barra de direcciones cambia la altura al deslizar. Rehacer
+    // el lienzo en cada cambio lo borraba y la pantalla parpadeaba en negro:
+    // solo se vuelve a medir si cambia el ancho (por ejemplo, al girar el telefono).
+    if (tactil && window.innerWidth === anchoMedido) return;
+    anchoMedido = window.innerWidth;
+    medir();
+    if (reducir) dibujar(0);
+  });
   window.addEventListener("pointermove", (e) => { raton.x = e.clientX; raton.y = e.clientY; }, { passive: true });
   document.addEventListener("pointerleave", () => { raton.x = raton.y = -9999; });
   document.addEventListener("visibilitychange", () => {

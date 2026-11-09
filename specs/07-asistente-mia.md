@@ -8,7 +8,7 @@ Cloudflare Worker con `@anthropic-ai/sdk` ^1.3.0 y `wrangler` ^4.154.
 
 | Elemento | Valor |
 |---|---|
-| Configuración | `wrangler.toml`: `name = "casa-ia-asistente"`, `main = "src/index.js"`, `compatibility_date = "2026-09-01"`, `compatibility_flags = ["nodejs_compat"]`, `[vars] ORIGEN_PERMITIDO = "*"` (cambiar por la dirección de GitHub Pages al publicar) |
+| Configuración | `wrangler.toml`: `name = "casa-ia-asistente"`, `main = "src/index.js"`, `compatibility_date = "2026-09-01"`, `compatibility_flags = ["nodejs_compat"]`, `[vars] ORIGEN_PERMITIDO` = lista separada por comas: la página publicada (`https://mia.sistente.workers.dev`), GitHub Pages y `http://localhost:8080` |
 | Secretos | `ANTHROPIC_API_KEY` y `CODIGO_ACCESO` (`npx wrangler secret put …`). Para desarrollo local: `.dev.vars` a partir de `.dev.vars.example`. |
 | Ruta | Solo `POST /chat` (y `OPTIONS` para CORS) |
 | Scripts | `npm run dev` (local) · `npm run deploy` |
@@ -26,7 +26,7 @@ X-Codigo-Acceso: <frase del equipo>
 | Validación | Respuesta si falla |
 |---|---|
 | Método y ruta | 404 "Ruta no encontrada" |
-| `Origin` igual a `ORIGEN_PERMITIDO` (si no es `*`) | 403 "Origen no permitido" |
+| `Origin` dentro de la lista `ORIGEN_PERMITIDO` (si no es `*`) | 403 "Origen no permitido" |
 | `X-Codigo-Acceso` igual a `CODIGO_ACCESO` (que debe existir) | 401 "Código de acceso incorrecto" |
 | Cuerpo ≤ 400 000 caracteres | 413 "La conversación es muy larga. Inicia una nueva." |
 | JSON válido | 400 "JSON inválido" |

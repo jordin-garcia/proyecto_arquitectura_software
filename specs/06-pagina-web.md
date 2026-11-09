@@ -208,6 +208,12 @@ Si `servidorUrl` está vacío, `local.js` entiende órdenes sencillas: encender 
 | ≤ 860 px | Paneles en 1 columna; dispositivos y escenas en 3 columnas |
 | ≤ 760 px | Celular: el escenario ocupa la pantalla entre el encabezado y las pestañas; menú hamburguesa, buscador desplegable, accesos rápidos (Luces, Alarma, Clima, Escenas), pestañas inferiores (Inicio, Dispositivos, Escenas, Sensores, Ajustes), conversación como hoja inferior |
 
+**Modo ligero en celulares y tabletas** (≤ 760 px o pantalla táctil). En Chrome de Android, el vidrio desenfocado sobre el fondo animado agotaba la memoria gráfica: la pantalla parpadeaba en negro y quedaban rectángulos sin dibujar (9 nov 2026). En estos dispositivos:
+- no se usa `backdrop-filter`: la cabecera, las pestañas y los avisos tienen fondo opaco;
+- el fondo de partículas dibuja a 1× con 50 partículas como máximo;
+- el lienzo solo se rehace si cambia el ancho, no cuando la barra de direcciones cambia la altura al deslizar;
+- se quita el destello que recorre el borde de los paneles.
+
 ## 6.5 Ciclo de vida
 
 1. `iniciar()` arma la interfaz, crea a MIA y el fondo, pinta el estado inicial y saluda.

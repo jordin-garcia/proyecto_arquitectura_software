@@ -4,8 +4,9 @@ compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# Cambien "*" por la direccion de su pagina, por ejemplo "https://su-usuario.github.io"
-ORIGEN_PERMITIDO = "*"
+# Direcciones que pueden usar a MIA, separadas por comas ("*" = cualquiera).
+# La pagina publicada, GitHub Pages y la prueba local en la PC.
+ORIGEN_PERMITIDO = "https://mia.sistente.workers.dev,https://jordin-garcia.github.io,http://localhost:8080"
 
 # Secretos (NO se escriben aqui). Se configuran con:
 #   npx wrangler secret put ANTHROPIC_API_KEY

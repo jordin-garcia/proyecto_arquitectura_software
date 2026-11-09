@@ -9,10 +9,20 @@ const MODELO = "claude-haiku-5-5";
 const MAX_MENSAJES = 120;
 const MAX_BYTES = 400_000;
 
+// ORIGEN_PERMITIDO: "*" o una lista separada por comas
+function origenesPermitidos(env) {
+  return (env.ORIGEN_PERMITIDO || "*").split(",").map((o) => o.trim()).filter(Boolean);
+}
+
+function origenValido(origen, env) {
+  const lista = origenesPermitidos(env);
+  return lista.includes("*") || lista.includes(origen);
+}
+
 function encabezadosCors(origen, env) {
-  const permitido = env.ORIGEN_PERMITIDO || "*";
+  const lista = origenesPermitidos(env);
   return {
-    "Access-Control-Allow-Origin": permitido === "*" ? "*" : permitido,
+    "Access-Control-Allow-Origin": lista.includes("*") ? "*" : lista.includes(origen) ? origen : lista[0],
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Codigo-Acceso",
     "Access-Control-Max-Age": "86400",
@@ -39,8 +49,7 @@ export default {
     }
 
     // Seguridad basica: solo la pagina del proyecto y con el codigo de acceso del equipo
-    const permitido = env.ORIGEN_PERMITIDO || "*";
-    if (permitido !== "*" && origen !== permitido) {
+    if (!origenValido(origen, env)) {
       return responder({ error: "Origen no permitido" }, 403, cors);
     }
     if (!env.CODIGO_ACCESO || request.headers.get("X-Codigo-Acceso") !== env.CODIGO_ACCESO) {

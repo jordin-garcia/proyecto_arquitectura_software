@@ -50,7 +50,7 @@ Describen **qué debe hacer** el sistema y **cómo está construido**. Cuando el
 | Firmware | Probado en la placa real con el cableado de la maqueta. Se conecta al WiFi, a EMQX y por Bluetooth. Sensores calibrados. Compila sin errores ni advertencias: programa al 40 %, RAM global al 18 %. |
 | Página web | Conectada a la casa real por WiFi (EMQX) y Bluetooth al mismo tiempo |
 | MIA | Probada con la API real a través del servidor publicado |
-| Servidor | Publicado en Cloudflare: `https://casa-ia-asistente.engineer-jordin.workers.dev` |
+| Servidor | Publicado en Cloudflare: `https://casa-ia-asistente.sistente.workers.dev` |
 | Broker MQTT | EMQX Cloud Serverless (HiveMQ dejó de crear brokers gratuitos) |
 | Hardware | Armado y probado. Pendiente: aislar empalmes de 120 V, diodos en ventilador y bomba, confirmar 3.3 V en el sensor de suelo. La maqueta 3D todavía muestra el diseño anterior. |
 
