@@ -9,20 +9,24 @@
 | Recurso | Origen | Uso |
 |---|---|---|
 | mqtt.js 5.10.1 | `unpkg.com/mqtt@5.10.1/dist/mqtt.min.js` (global `mqtt`) | MQTT por WebSocket |
-| Chart.js 4.4.1 | `cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js` (global `Chart`) | Gráfica |
-| Plus Jakarta Sans | Google Fonts | Tipografía |
+| Exo 2 y Plus Jakarta Sans | Google Fonts | Títulos y números / texto |
+| `img/sala.jpg`, `img/planta.png` | En el repositorio (generadas con IA) | Fondo del escenario de MIA y planta decorativa |
 
-Si Chart.js no carga, la página funciona sin la gráfica.
+La gráfica, el avatar, los sonidos y el fondo animado están hechos a mano (CSS, SVG, Canvas y Web Audio); no hay más bibliotecas.
 
 ## 6.2 Módulos
 
 | Archivo | Responsabilidad | Exporta |
 |---|---|---|
-| `js/app.js` | Arranque, armado y pintado de la interfaz, avisos de la alarma, eventos, ajustes, chat | — |
+| `js/app.js` | Arranque, armado y pintado de la interfaz, escenas, buscador, notificaciones, alarma, ajustes, chat | — |
+| `js/mia.js` | Avatar animado de MIA: estados, expresiones, mirada, parpadeo y nivel de voz | `crearMia` |
+| `js/local.js` | Órdenes sencillas sin servidor (simulador o sin internet) traducidas a las mismas herramientas | `interpretar` |
+| `js/fondo.js` | Red de partículas del fondo que reacciona al puntero y se pone roja con la alarma | `iniciarFondo` |
+| `js/sonidos.js` | Efectos de sonido sintetizados con Web Audio | `sonar`, `activarSonidos` |
 | `js/conexion.js` | Estado compartido `casa`, MQTT, BLE, simulador, envío y confirmación de comandos | `casa`, `suscribir`, `conectarMqtt`, `desconectarMqtt`, `conectarBle`, `desconectarBle`, `bluetoothDisponible`, `iniciarSimulador`, `enviarComando`, `esperar`, `hayDatosRecientes` |
-| `js/modelo.js` | Catálogo de dispositivos, sensores y umbrales; validaciones; textos | `DISPOSITIVOS`, `DISPOSITIVOS_REGLAS`, `SENSORES`, `UMBRALES`, `MAX_REGLAS`, `nombrePorClave`, `validarValorDispositivo`, `validarUmbral`, `formatoHora`, `textoValorDispositivo`, `textoRegla` |
-| `js/asistente.js` | Historial de Claude, contexto en vivo, herramientas y ciclo de conversación | `conversar`, `nuevaConversacion`, `describirAccion` |
-| `js/voz.js` | Reconocimiento y síntesis de voz | `escuchar`, `detenerEscucha`, `hablar`, `callar`, `reconocimientoDisponible`, `sintesisDisponible` |
+| `js/modelo.js` | Catálogo de dispositivos, sensores, umbrales y escenas; validaciones; textos | `DISPOSITIVOS`, `DISPOSITIVOS_REGLAS`, `SENSORES`, `UMBRALES`, `ESCENAS`, `MAX_REGLAS`, `nombrePorClave`, `validarValorDispositivo`, `validarUmbral`, `formatoHora`, `textoValorDispositivo`, `textoRegla` |
+| `js/asistente.js` | Historial de Claude, contexto en vivo, herramientas y ciclo de conversación | `conversar`, `nuevaConversacion`, `ejecutarAccion`, `describirAccion` |
+| `js/voz.js` | Reconocimiento y síntesis de voz, nivel del micrófono | `escuchar`, `detenerEscucha`, `hablar`, `callar`, `medirMicrofono`, `reconocimientoDisponible`, `sintesisDisponible` |
 | `js/simulador.js` | ESP32 simulado con el mismo protocolo | `crearSimulador` |
 | `js/iconos.js` | Iconos SVG de trazo | `icono`, `pintarIconos` |
 
@@ -43,10 +47,10 @@ Si Chart.js no carga, la página funciona sin la gráfica.
 | Nombre interno | Clave | Interfaz | Icono | Marca |
 |---|---|---|---|---|
 | `luz_interior` | `li` | Foco interior | foco | `siempreManual`: se controla en cualquier modo |
-| `luz_exterior` | `le` | Foco exterior | luna | — |
-| `ventilador` | `f` | Ventilador | viento | — |
+| `luz_exterior` | `le` | Foco exterior | focoExterior | — |
+| `ventilador` | `f` | Ventilador | ventilador | — |
 | `bomba_riego` | `b` | Riego | gota | — |
-| `alarma` | `al` | Alarma | campana | `soloAlarma`: en automático solo se puede apagar |
+| `alarma` | `al` | Alarma | sirena | `soloAlarma`: en automático solo se puede apagar |
 
 - `DISPOSITIVOS_REGLAS` = `luz_exterior`, `ventilador` y `bomba_riego`.
 - Textos de estado:
@@ -54,7 +58,7 @@ Si Chart.js no carga, la página funciona sin la gráfica.
   - riego: "Regando" o "Apagado";
   - los demás: "Encendido" o "Apagado".
 
-### Sensores, en orden de las tarjetas
+### Sensores
 
 | Sensor | Clave | Unidad |
 |---|---|---|
@@ -68,109 +72,149 @@ Si Chart.js no carga, la página funciona sin la gráfica.
 ### Umbrales
 `temp_max`, `humedad_suelo_min`, `luz_noche` y `tiempo_alarma`, con los rangos de [05](05-protocolo.md).
 
+### Escenas (`ESCENAS`)
+
+Solo existen en la página. Se aplican con las mismas herramientas de MIA (`cambiar_modo` y `controlar_dispositivo`), así que pasan las mismas validaciones. La alarma no aparece en ninguna escena.
+
+| Escena | Modo | Dispositivos |
+|---|---|---|
+| Hogar | automático | — |
+| Descanso | automático | foco interior apagado |
+| Película | manual | focos apagados, ventilador encendido, riego apagado |
+| Ahorro | manual | todo apagado |
+
+"Nueva" abre la conversación con MIA para crear una regla.
+
 ## 6.4 Interfaz
 
-### Barra superior
+Tema oscuro holográfico (azul marino, cristal y brillos cian) basado en `mockup_UI.jpeg`. Respeta `prefers-reduced-motion`: sin arranque animado, sin partículas en movimiento y con transiciones instantáneas.
 
-- Marca "Casa IA".
-- Chip **WiFi**, con un punto de color:
+### Encabezado
 
-  | Estado | Significado |
-  |---|---|
-  | `desconectado` | Sin conexión; al tocarlo abre los ajustes |
-  | `conectando` | Conectando al broker |
-  | `conectado` | Conectado al broker y con el ESP32 en línea |
-  | `sin-casa` | Conectado al broker, pero el ESP32 no está en línea |
+Sin marco exterior. El encabezado queda fijo arriba; la barra lateral y la columna de MIA (escenario + pie de estado) miden exactamente el alto que queda de pantalla (`--alto-app`) y también quedan fijas, así que se ven completas sin desplazarse. Solo la columna de paneles se desplaza. Dentro del escenario, los espacios se ajustan con la altura y MIA ocupa el hueco que queda (unidades de contenedor `cqh`/`cqw`).
 
-- Chip **Bluetooth**: toca para conectar o desconectar.
-- Selector **Automático / Manual**.
-- Botón de **Ajustes**.
+- Logotipo de MIA y lema "Asistente de Hogar Inteligente".
+- **Buscador de comandos** (Ctrl+K): busca dispositivos, escenas, modos, sensores, vistas y ajustes, y ejecuta la opción elegida. Siempre ofrece "Pedírselo a MIA".
+- **Notificaciones** con contador: alarmas y cambios de conexión.
+- **Mi Hogar**: punto de estado y menú con WiFi (estados `desconectado`, `conectando`, `conectado`, `sin-casa`), Bluetooth y Ajustes.
 
-### Panel "Casa"
+### Menú lateral
 
-1. **Aviso de la alarma.** Solo se muestra con datos recientes.
+Inicio, Dispositivos, Escenas, Sensores, Historial, Automatizaciones y Ajustes. Las cuatro del medio desplazan la vista al panel y lo resaltan; Automatizaciones cambia la columna derecha.
 
-   | Situación | Título | Detalle | Botón |
-   |---|---|---|---|
-   | `al = 1` | "¡Persona detectada! La alarma está sonando" | "El sensor de movimiento detectó a alguien durante más de N segundos…" | **Desactivar alarma**: envía `{"c":"alarma","v":0}` |
-   | `al = 0` y `as = 1` | "Alarma silenciada" | "El sensor todavía detecta a alguien. La alarma se rearma cuando ya no haya nadie." | Ninguno |
+### Escenario de MIA (siempre visible en escritorio)
 
-   Mientras suena, el icono parpadea, salvo que el sistema pida movimiento reducido.
+- Saludo "Hola, soy MIA" sobre la foto de la sala, con olas animadas.
+- Avatar de MIA (ver 6.4.1). Al tocarlo, escucha.
+- Subtítulo que escribe letra por letra lo que dice MIA o, en cursiva, lo que dice el usuario, y burbujas con las acciones confirmadas.
+- Sugerencias: "Encender la luz", "Activar una escena" y "Ver la temperatura".
+- Micrófono con ondas que siguen el volumen real, botón "Presiona para hablar" y botón de teclado que abre la conversación.
+- **Aviso de la alarma** arriba del escenario:
 
-2. **Sensores:** 6 tarjetas.
-   - Las de porcentaje muestran una barra.
-   - Temperatura se resalta si `t ≥ tmax`.
-   - Presencia se marca en rojo mientras suena la alarma.
-   - Indicador "En vivo / Sin datos recientes / Sin datos".
-   - En modo demo, botón **"Simular una persona"**.
+  | Situación | Título | Botón |
+  |---|---|---|
+  | `al = 1` | "¡Persona detectada! La alarma está sonando" | **Desactivar alarma**: herramienta `silenciar_alarma` |
+  | `al = 0` y `as = 1` | "Alarma silenciada" | Ninguno |
 
-3. **Dispositivos:** 5 tarjetas con interruptor.
+  Mientras suena, toda la página se tiñe de rojo (viñeta, fondo y partículas) y MIA pasa a `alerta`.
 
-   | Interruptor | Habilitado cuando… |
-   |---|---|
-   | Foco interior | Hay datos recientes, **en cualquier modo**. Su estado dice "· desde la página". |
-   | Alarma | En manual; en automático solo mientras suena, para apagarla |
-   | Los demás | Hay datos recientes y la casa está en manual |
+#### 6.4.1 Avatar de MIA (`mia.js`)
 
-4. **Gráfica "Últimos 5 minutos":** un punto cada 2 s, máximo 150. Temperatura en el eje izquierdo; humedad del suelo y luz en el derecho.
+Esfera de cristal con cara (ojos y boca SVG que se interpolan cuadro a cuadro), anillo orbital, base holográfica, aro de HUD y halo. Sigue al puntero con la mirada, se inclina en 3D y parpadea sola.
 
-5. **Reglas personalizadas:** lista con id, texto y botón para borrar.
+| Estado | Cuándo | Expresión y movimiento |
+|---|---|---|
+| `reposo` | Esperando | Ojos felices, flota |
+| `escuchando` | Micrófono abierto | Ojos abiertos, ondas "((( )))", crece con el volumen |
+| `pensando` | Esperando a Claude | Mira arriba de lado a lado, el anillo gira con una luna |
+| `hablando` | Respondiendo | Boca que se mueve con cada palabra, barras de voz |
+| `ejecutando` | Aplicando herramientas o escenas | Aro punteado girando, mirada concentrada |
+| `exito` | Acción confirmada | Sonrisa grande, mejillas y destellos (verde) |
+| `error` | Acción fallida | Ojos tristes, se sacude (ámbar) |
+| `alerta` | Alarma sonando | Ojos muy abiertos, boca en "O", pulsos rojos |
+| `dormida` | 75 s sin actividad | Ojos cerrados, "z z Z"; despierta con un guiño |
+| `curiosa`, `guino`, `cosquillas` | Al pasar el puntero, al despertar, al saludar | Reacciones cortas |
 
-6. **Alertas de la alarma:**
-   - historial de esta visita, las últimas 10, con hora y texto;
-   - opción **"Avisarme también con notificaciones del navegador"**: al marcarla pide permiso con `Notification.requestPermission()`; si se niega, se desmarca y avisa.
+`exito`, `error` y las reacciones cortas duran 1-2 s y vuelven solas al estado base.
 
-7. **Umbrales de automatización:** formulario con los 4 umbrales.
-   - Se valida cada valor y solo se envían los que cambiaron, confirmando cada uno.
-   - El formulario no se sobrescribe mientras el usuario edita.
+### Columna de paneles (vista Inicio)
+
+1. **Dispositivos del Hogar:** selector Auto / Manual y 5 tarjetas.
+   - Foco interior: interruptor en cualquier modo.
+   - Foco exterior, ventilador y riego: en automático muestran un candado; al tocarlos se ofrece "Pasar a manual".
+   - Alarma: "Vigilando" / "¡Sonando!" / "Silenciada" / "En manual"; botón **Silenciar** solo mientras suena.
+   - El ventilador gira, el riego gotea y los focos brillan al estar encendidos.
+2. **Escenas Inteligentes:** las 4 escenas y "Nueva". La escena aplicada queda marcada mientras el estado coincida.
+3. **Sensores del Hogar:** movimiento (verde, ámbar con persona, rojo con alarma), temperatura (resaltada si `t ≥ tmax`), humedad del aire, humedad del suelo y luz con barra, y hora del ESP32. Los números se animan. En modo demo, botón **"Simular una persona"**.
+4. **Estado de la ESP32:** WiFi (o "Simulador"), Bluetooth (tocar para conectar), ESP32 con su hora y "Funcionando correctamente" / "Sin datos recientes". Píldora "En línea / Conectando / Sin conexión".
+5. **Historial de Sensores:** selector de sensor, valor actual con la tendencia del último minuto y 7 barras con el promedio de cada 10 s. (El mockup mostraba consumo en kWh, pero la maqueta no tiene medidor de energía.)
+
+### Vista Automatizaciones
+
+- **Reglas personalizadas:** id, texto y botón para borrar; botón "Crear con MIA".
+- **Umbrales:** deslizadores con el valor al lado. Solo se envían los que cambiaron, confirmando cada uno. No se sobrescriben mientras el usuario edita.
+- **Alertas de la alarma:** últimas 10 de esta visita y la opción de notificaciones del navegador (pide permiso; si se niega, se desmarca y avisa).
+
+### Conversación (panel lateral)
+
+- MIA pequeña que copia el estado de la principal.
+- Chat con cinco tipos de mensaje: usuario, asistente, acción (✓ o ⚠), nota y error; puntos animados mientras piensa.
+- Micrófono, campo de texto y enviar. Opciones "Responder con voz" (activada) y "Conversación continua".
+- Botón de nueva conversación.
 
 ### Aviso de una alarma nueva (`revisarNuevaAlarma`)
 
 1. Al recibir el primer estado se guarda `na` sin avisar.
 2. Cuando `na` sube:
-   - agrega una entrada al historial ("Persona detectada: la alarma se activó", con la hora);
-   - muestra un mensaje emergente rojo;
-   - agrega una nota en el chat de Aurora;
-   - si la opción está activa y hay permiso, muestra una notificación del navegador "Casa IA: alarma activada".
+   - agrega una entrada al historial ("Persona detectada: la alarma se activó", con la hora) y una notificación;
+   - muestra un mensaje emergente rojo con el botón "Silenciar" y suena un aviso;
+   - agrega una nota en el chat y MIA lo dice en el subtítulo;
+   - si la opción está activa y hay permiso, muestra una notificación del navegador "MIA: alarma activada".
 3. Si `na` baja (el ESP32 se reinició), solo se actualiza el valor guardado.
-
-### Panel "Aurora"
-- Orbe con cuatro estados: `reposo`, `escuchando`, `pensando` y `hablando`.
-- Botón de nueva conversación y chat con cinco tipos de mensaje: usuario, asistente, acción (✓ o ⚠), nota y error.
-- Sugerencias: "¿Cómo está la casa?", "Activa el modo noche", "Enciende el foco de la sala" y "Me voy de la casa".
-- Micrófono, campo de texto y botón de enviar.
-- Opciones "Responder con voz" (activada) y "Conversación continua".
 
 ### Ajustes (`<dialog>`)
 
 | Campo | Ejemplo |
 |---|---|
-| `mqttUrl` | `wss://xxxx.s1.eu.hivemq.cloud:8884/mqtt` |
+| `mqttUrl` | `wss://xxxx.ala.us-east-1.emqxsl.com:8084/mqtt` |
 | `mqttUsuario`, `mqttClave` | `web-casa` |
 | `idCasa` | `casa01` |
 | `servidorUrl` | `https://casa-ia-asistente.<cuenta>.workers.dev` |
 | `codigoAcceso` | Frase secreta del equipo |
 
 - Se guardan en `localStorage["casaIA.ajustes"]`, dentro de try/catch.
+- Preferencias (voz, conversación continua, efectos de sonido, animación de inicio) en `localStorage["casaIA.preferencias"]`.
 - Al guardar: reconecta MQTT y reinicia la conversación.
+
+### MIA sin servidor
+
+Si `servidorUrl` está vacío, `local.js` entiende órdenes sencillas: encender o apagar dispositivos (pasa a manual si hace falta), modos, escenas, silenciar la alarma y preguntas por temperatura, humedad, luz, hora o el estado general. Usa las mismas herramientas y validaciones. Con servidor configurado, todo va a Claude.
+
+### Atajos
+
+| Tecla | Acción |
+|---|---|
+| Ctrl+K | Buscador de comandos |
+| M | Hablar con MIA |
+| Esc | Cerrar conversación, menús y desplegables |
 
 ### Diseño adaptable
 
 | Ancho | Distribución |
 |---|---|
-| > 1200 px | Panel de la casa y panel de Aurora lado a lado |
-| ≤ 1200 px | Sensores en 3 columnas, dispositivos en 2; gráfica y reglas apiladas |
-| ≤ 900 px | Pestañas inferiores **Casa / Aurora**; sensores en 2 columnas, dispositivos en 1; chips solo con icono |
-| ≤ 420 px | Sin el nombre de la marca; umbrales en una columna |
-
-Tema claro y oscuro según `prefers-color-scheme`. Se respeta `prefers-reduced-motion`.
+| > 1360 px | Menú, escenario de MIA fijo y columna de paneles |
+| ≤ 1360 px | Sin lema |
+| ≤ 1180 px | Menú a la izquierda; escenario arriba (alto de pantalla, máximo 760 px) y paneles en 2 columnas debajo |
+| ≤ 860 px | Paneles en 1 columna; dispositivos y escenas en 3 columnas |
+| ≤ 760 px | Celular: el escenario ocupa la pantalla entre el encabezado y las pestañas; menú hamburguesa, buscador desplegable, accesos rápidos (Luces, Alarma, Clima, Escenas), pestañas inferiores (Inicio, Dispositivos, Escenas, Sensores, Ajustes), conversación como hoja inferior |
 
 ## 6.5 Ciclo de vida
 
-1. `iniciar()` arma la interfaz, pinta el estado inicial (incluidos el aviso y el historial vacío) y saluda.
-2. Se suscribe a los eventos de `casa`. Con cada estado: sensores, dispositivos, aviso, `revisarNuevaAlarma()` y gráfica.
-3. Cada 1 s repinta la frescura, los dispositivos y el aviso.
-4. Conexión inicial:
+1. `iniciar()` arma la interfaz, crea a MIA y el fondo, pinta el estado inicial y saluda.
+2. Animación de arranque (una vez por sesión, se puede saltar y desactivar en Ajustes) y entrada escalonada de los paneles.
+3. Se suscribe a los eventos de `casa`. Con cada estado: sensores, dispositivos, escenas, aviso, `revisarNuevaAlarma()`, historial y ESP32.
+4. Cada 1 s repinta la frescura, los dispositivos y el aviso.
+5. Conexión inicial:
    - con `?demo=1` inicia el simulador y muestra "Simular una persona";
    - si no, MQTT si hay `mqttUrl`;
    - si tampoco hay `servidorUrl`, abre los ajustes.
@@ -202,7 +246,9 @@ Tema claro y oscuro según `prefers-color-scheme`. Se respeta `prefers-reduced-m
 | Errores | `not-allowed` → "Permite el uso del micrófono…". Se ignoran `no-speech` y `aborted`. |
 | Síntesis | `speechSynthesis` a velocidad 1.05. Prefiere voces "Google", "Natural" u "Online", de español latinoamericano y femeninas. |
 | Cola | Las respuestas se leen en orden; un mensaje nuevo calla la voz anterior. |
-| Compatibilidad | Probado en Chrome y Edge en PC y Android. Si no hay reconocimiento, el micrófono lo avisa y se usa texto. |
+| Nivel del micrófono | `medirMicrofono` usa `getUserMedia` y un `AnalyserNode` para que MIA y las ondas sigan el volumen. Si no hay permiso, se usa una onda simulada. |
+| Boca de MIA | `hablar(texto, alPalabra)` llama a `alPalabra` en cada evento `boundary` de la síntesis. |
+| Compatibilidad | Probado en Chrome y Edge en PC y Android. Si no hay reconocimiento, el micrófono lo avisa y ofrece escribir. |
 
 ## 6.8 Errores visibles
 
@@ -212,4 +258,4 @@ Tema claro y oscuro según `prefers-color-scheme`. Se respeta `prefers-reduced-m
 | Navegador sin Bluetooth | "Este navegador no soporta Bluetooth. Usa Chrome o Edge." |
 | El ESP32 no confirmó un umbral | "El ESP32 no aceptó: <umbral>" |
 | Notificaciones no permitidas | "El navegador no dio permiso para mostrar notificaciones." |
-| Error de Aurora | Mensaje de error en el chat |
+| Error de MIA | Mensaje de error en el chat |

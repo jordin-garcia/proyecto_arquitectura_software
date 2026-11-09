@@ -148,6 +148,11 @@ void escribirRele(int pin, bool encendido) {
   digitalWrite(pin, (encendido ^ RELE_ACTIVO_BAJO) ? HIGH : LOW);
 }
 
+// Salidas con transistor 2N2222: ALTO = encendido
+void escribirTransistor(int pin, bool encendido) {
+  digitalWrite(pin, encendido ? HIGH : LOW);
+}
+
 // ---------------------------------------------------------------------
 //  Persistencia de umbrales y reglas en la memoria flash
 // ---------------------------------------------------------------------
@@ -343,18 +348,23 @@ void leerPresencia() {
   xSemaphoreGive(mutex);
 }
 
-// Sensor de suelo: se enciende con PIN_SUELO_VCC, espera un momento, mide y se apaga
+// Sensor de suelo: cada SUELO_CADA_MS se mide. Si tiene PIN_SUELO_VCC, se enciende,
+// espera un momento, mide y se apaga.
 void leerSuelo() {
   static uint32_t ultimoSuelo = 0, encendidoDesde = 0;
   static bool encendido = false;
   uint32_t ahora = millis();
   if (!encendido && ahora - ultimoSuelo >= SUELO_CADA_MS) {
+#if PIN_SUELO_VCC >= 0
     digitalWrite(PIN_SUELO_VCC, HIGH);
+#endif
     encendido = true;
     encendidoDesde = ahora;
   } else if (encendido && ahora - encendidoDesde >= SUELO_ESPERA_MS) {
     int crudo = leerAnalogPromedio(PIN_SUELO);
+#if PIN_SUELO_VCC >= 0
     digitalWrite(PIN_SUELO_VCC, LOW);
+#endif
     encendido = false;
     ultimoSuelo = ahora;
 #if DEPURAR_SENSORES
@@ -393,7 +403,8 @@ void leerSensores() {
     if (!isnan(t) && !isnan(h)) { lect.temp = t; lect.humAire = h; fallosDht = 0; }
     else if (++fallosDht >= 5) { lect.temp = NAN; lect.humAire = NAN; }
   }
-  lect.luz = constrain(map(crudoLuz, 0, 4095, 0, 100), 0, 100);
+  if (!LDR_SUBE_CON_LUZ) crudoLuz = 4095 - crudoLuz;
+  lect.luz = constrain(map(crudoLuz, 0, LDR_MAX, 0, 100), 0, 100);
   lect.horaMin = horaMin;
   xSemaphoreGive(mutex);
 }
@@ -487,11 +498,11 @@ void aplicarSalidas() {
   uint32_t ahora = millis();
   escribirRele(PIN_RELE_LUZ_INT, salida[LUZ_INT]);
   escribirRele(PIN_RELE_LUZ_EXT, salida[LUZ_EXT]);
-  escribirRele(PIN_RELE_VENT, salida[VENT]);
+  escribirTransistor(PIN_VENT, salida[VENT]);
 
   if (salida[BOMBA] && !bombaEncendidaDesde) bombaEncendidaDesde = ahora;
   if (!salida[BOMBA]) bombaEncendidaDesde = 0;
-  escribirRele(PIN_RELE_BOMBA, salida[BOMBA]);
+  escribirTransistor(PIN_BOMBA, salida[BOMBA]);
 
   // Alarma intermitente: 400 ms sonando, 400 ms en silencio
   digitalWrite(PIN_BUZZER, salida[ALARMA] && (ahora / 400) % 2 == 0 ? HIGH : LOW);
@@ -580,9 +591,12 @@ void alRecibirMqtt(char* topico, byte* datos, unsigned int len) {
 }
 
 void conectarMqtt() {
-  String id = String("esp32-" ID_CASA "-") + String((uint32_t)esp_random(), HEX);
+  // ID fijo: al reconectar, el broker cierra la sesion vieja en ese momento y su
+  // ultimo deseo ("0") sale antes del "1" nuevo. Con un ID al azar, el "0" de la
+  // sesion vieja llegaba ~45 s despues y dejaba la casa como desconectada.
+  const char* id = "esp32-" ID_CASA;
   Serial.print("MQTT: conectando... ");
-  if (mqtt.connect(id.c_str(), MQTT_USUARIO, MQTT_CLAVE, TOPICO("online"), 0, true, "0")) {
+  if (mqtt.connect(id, MQTT_USUARIO, MQTT_CLAVE, TOPICO("online"), 0, true, "0")) {
     Serial.println("OK");
     mqtt.publish(TOPICO("online"), "1", true);
     mqtt.subscribe(TOPICO("cmd"));
@@ -613,7 +627,7 @@ void tareaComunicaciones(void*) {
   mqtt.setBufferSize(768);
   mqtt.setKeepAlive(30);
 
-  uint32_t ultimoWifi = 0, ultimoMqtt = 0, ultimoEstado = 0;
+  uint32_t ultimoWifi = 0, ultimoMqtt = 0, ultimoEstado = 0, ultimoOnline = 0;
   bool wifiAvisado = false;
   for (;;) {
     uint32_t ahora = millis();
@@ -634,6 +648,11 @@ void tareaComunicaciones(void*) {
         if (ahora - ultimoMqtt > 5000) { ultimoMqtt = ahora; conectarMqtt(); }
       } else {
         mqtt.loop();
+        // Repite "en linea" cada minuto por si un ultimo deseo atrasado lo cambio a "0"
+        if (ahora - ultimoOnline >= 60000) {
+          ultimoOnline = ahora;
+          mqtt.publish(TOPICO("online"), "1", true);
+        }
       }
     }
 
@@ -661,13 +680,15 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n=== Casa inteligente - iniciando ===");
 
-  // Primero el nivel de apagado y despues OUTPUT, para que ningun rele se active al arrancar
-  const int reles[] = {PIN_RELE_LUZ_INT, PIN_RELE_LUZ_EXT, PIN_RELE_VENT, PIN_RELE_BOMBA};
+  // Primero el nivel de apagado y despues OUTPUT, para que nada se encienda al arrancar
+  const int reles[] = {PIN_RELE_LUZ_INT, PIN_RELE_LUZ_EXT};
   for (int p : reles) { escribirRele(p, false); pinMode(p, OUTPUT); escribirRele(p, false); }
-  pinMode(PIN_BUZZER, OUTPUT);
-  digitalWrite(PIN_BUZZER, LOW);
+  const int transistores[] = {PIN_VENT, PIN_BOMBA, PIN_BUZZER};
+  for (int p : transistores) { digitalWrite(p, LOW); pinMode(p, OUTPUT); digitalWrite(p, LOW); }
+#if PIN_SUELO_VCC >= 0
   pinMode(PIN_SUELO_VCC, OUTPUT);
   digitalWrite(PIN_SUELO_VCC, LOW);
+#endif
   pinMode(PIN_PIR, INPUT);
   attachInterrupt(digitalPinToInterrupt(PIN_PIR), isrPir, RISING);
   dht.begin();

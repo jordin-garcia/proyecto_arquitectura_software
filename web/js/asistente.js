@@ -154,6 +154,15 @@ async function ejecutarHerramienta(bloque) {
   }
 }
 
+/**
+ * Ejecuta una herramienta desde la pagina (escenas, interruptores y ordenes locales),
+ * con las mismas validaciones que cuando la pide Claude.
+ */
+export async function ejecutarAccion(nombre, input = {}) {
+  const r = await ejecutarHerramienta({ id: "local", name: nombre, input });
+  return { ok: !r.is_error, texto: r.content };
+}
+
 // Texto corto para mostrar en el chat lo que hizo la asistente
 export function describirAccion(bloque) {
   const i = bloque.input || {};
@@ -190,7 +199,7 @@ async function llamarServidor(config) {
 
 /**
  * Envia un mensaje del usuario y resuelve todo el turno (incluidas las acciones).
- * eventos: { alTexto(texto), alAccion(descripcion, ok), alPensar(bool), alReiniciar() }
+ * eventos: { alTexto(texto), alAccion(descripcion, ok), alPensar(bool), alEjecutar(bool), alReiniciar() }
  */
 export async function conversar(textoUsuario, config, eventos = {}) {
   if (historial.length > MAX_MENSAJES) {
@@ -226,11 +235,13 @@ export async function conversar(textoUsuario, config, eventos = {}) {
 
       if (respuesta.stop_reason === "tool_use") {
         const resultados = [];
+        eventos.alEjecutar?.(true);
         for (const bloque of respuesta.content.filter((b) => b.type === "tool_use")) {
           const resultado = await ejecutarHerramienta(bloque);
           if (bloque.name !== "consultar_estado") eventos.alAccion?.(describirAccion(bloque), !resultado.is_error);
           resultados.push(resultado);
         }
+        eventos.alEjecutar?.(false);
         historial.push({ role: "user", content: resultados });
         continue;
       }
@@ -241,6 +252,7 @@ export async function conversar(textoUsuario, config, eventos = {}) {
     eventos.alTexto?.("Hice varias acciones seguidas y me detuve por seguridad. ¿Continúo?");
   } catch (e) {
     eventos.alPensar?.(false);
+    eventos.alEjecutar?.(false);
     // Si el turno quedo a medias, se descarta para que el historial siga siendo valido
     const ultimo = historial[historial.length - 1];
     const turnoIncompleto = ultimo?.role === "user" || ultimo?.content?.some?.((b) => b.type === "tool_use");

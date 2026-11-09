@@ -5,10 +5,10 @@
 // soloAlarma: lo enciende el PIR; desde la página solo se puede silenciar o probar en manual
 export const DISPOSITIVOS = {
   luz_interior: { clave: "li", nombre: "Foco interior", icono: "foco", siempreManual: true },
-  luz_exterior: { clave: "le", nombre: "Foco exterior", icono: "luna" },
-  ventilador: { clave: "f", nombre: "Ventilador", icono: "viento" },
+  luz_exterior: { clave: "le", nombre: "Foco exterior", icono: "focoExterior" },
+  ventilador: { clave: "f", nombre: "Ventilador", icono: "ventilador" },
   bomba_riego: { clave: "b", nombre: "Riego", icono: "gota" },
-  alarma: { clave: "al", nombre: "Alarma", icono: "campana", soloAlarma: true },
+  alarma: { clave: "al", nombre: "Alarma", icono: "sirena", soloAlarma: true },
 };
 
 // El foco interior (solo página) y la alarma (solo PIR) no se usan en reglas
@@ -80,3 +80,13 @@ export function textoRegla(r) {
   const accion = `${DISPOSITIVOS[disp]?.nombre.toLowerCase() ?? r.d}: ${textoValorDispositivo(disp, r.v).toLowerCase()}`;
   return `${condicion} → ${accion}`;
 }
+
+// Escenas rapidas de la pagina: combinaciones de modo y dispositivos que se aplican
+// con las mismas herramientas que usa MIA (cambiar_modo y controlar_dispositivo).
+// La alarma no aparece: solo la enciende el PIR en modo automatico.
+export const ESCENAS = {
+  hogar: { nombre: "Hogar", icono: "casa", descripcion: "La casa decide sola con sus sensores", modo: "automatico", dispositivos: {} },
+  descanso: { nombre: "Descanso", icono: "luna", descripcion: "Apaga la sala y deja la alarma vigilando", modo: "automatico", dispositivos: { luz_interior: 0 } },
+  pelicula: { nombre: "Película", icono: "pelicula", descripcion: "Luces apagadas y ventilador encendido", modo: "manual", dispositivos: { luz_interior: 0, luz_exterior: 0, ventilador: 1, bomba_riego: 0 } },
+  ahorro: { nombre: "Ahorro", icono: "hoja", descripcion: "Apaga todo (en manual la alarma no se activa)", modo: "manual", dispositivos: { luz_interior: 0, luz_exterior: 0, ventilador: 0, bomba_riego: 0 } },
+};

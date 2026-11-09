@@ -4,12 +4,12 @@ Guía para trabajar en este repositorio. Las especificaciones completas están e
 
 ## Qué es
 
-Casa inteligente en maqueta para el proyecto final de **Arquitectura del Computador** (Ingeniería en Sistemas, Universidad Rafael Landívar). Un **ESP32-WROOM-32** controla 5 dispositivos con sensores. Se maneja desde una **página web** (PC y celular) por **WiFi (MQTT)** y **Bluetooth (BLE)**, y tiene una asistente por texto y voz, **Aurora**, hecha con la API de Claude a través de un **Cloudflare Worker**.
+Casa inteligente en maqueta para el proyecto final de **Arquitectura del Computador** (Ingeniería en Sistemas, Universidad Rafael Landívar). Un **ESP32-WROOM-32** controla 5 dispositivos con sensores. Se maneja desde una **página web** (PC y celular) por **WiFi (MQTT)** y **Bluetooth (BLE)**, y tiene una asistente por texto y voz, **MIA**, hecha con la API de Claude a través de un **Cloudflare Worker**.
 
 Los 5 dispositivos:
 
-- foco interior de 12 V, que solo se controla desde la página;
-- foco exterior de 12 V, que se enciende con el LDR cuando no hay luz;
+- foco interior de 120 V (por relé), que solo se controla desde la página;
+- foco exterior de 120 V (por relé), que se enciende con el LDR cuando no hay luz;
 - riego, con sensor de suelo y bomba de 5 V;
 - ventilador de 5 V, con el DHT22;
 - alarma: el PIR detecta a una persona 5 s seguidos, suena el buzzer y la página recibe un aviso.
@@ -23,7 +23,7 @@ firmware/casa_inteligente/   ESP32 (Arduino, núcleo esp32 3.x)
   secrets.h.example            plantilla; secrets.h está en .gitignore
 servidor/                    Cloudflare Worker (POST /chat → API de Claude)
   src/index.js                 validación, CORS, código de acceso, llamada al modelo
-  src/asistente.js             prompt de sistema de Aurora y esquemas de herramientas
+  src/asistente.js             prompt de sistema de MIA y esquemas de herramientas
 web/                         Página estática (GitHub Pages), módulos ES sin build
   index.html, estilos.css
   js/app.js                    interfaz
@@ -31,6 +31,10 @@ web/                         Página estática (GitHub Pages), módulos ES sin b
   js/asistente.js              ciclo de herramientas de Claude
   js/modelo.js                 dispositivos, sensores, umbrales y validaciones
   js/simulador.js              ESP32 simulado (?demo=1)
+  js/mia.js                    avatar animado de MIA (estados y expresiones)
+  js/local.js                  órdenes sencillas sin servidor
+  js/fondo.js, js/sonidos.js   fondo de partículas y efectos de sonido
+  img/                         foto de la sala y planta
   js/voz.js, js/iconos.js
 specs/                       Especificaciones del proyecto
 .github/workflows/pagina.yml Publica web/ en GitHub Pages
@@ -54,7 +58,7 @@ python -m http.server 8080 --directory web
 
 Abrir `http://localhost:8080/?demo=1`. El botón "Simular una persona" prueba la alarma.
 
-Servidor de Aurora:
+Servidor de MIA:
 
 ```bash
 cd servidor && npm install && npm run dev
@@ -77,7 +81,7 @@ for f in web/js/*.js servidor/src/*.js; do node --check "$f"; done
   - `README.md` y `specs/`;
   - la maqueta 3D, si cambia el cableado.
 - **Validación en tres capas:** esquemas `strict` de las herramientas, `modelo.js` en la página y `aplicarUmbral()` / `reglaDesdeJson()` en el ESP32. El ESP32 es la autoridad final.
-- **Reglas de los dispositivos especiales** (firmware, página y Aurora):
+- **Reglas de los dispositivos especiales** (firmware, página y MIA):
   - el foco interior (`li`) se controla desde la página en cualquier modo y no tiene automatización;
   - la alarma (`al`) solo la enciende el PIR en modo automático y se puede apagar en cualquier modo;
   - ninguno de los dos se puede usar en reglas;
@@ -100,7 +104,7 @@ for f in web/js/*.js servidor/src/*.js; do node --check "$f"; done
 1. `node --check` sobre los archivos de JavaScript tocados.
 2. Probar la página con `?demo=1`:
    - si el cambio afecta al protocolo, actualicen también `simulador.js`;
-   - para Aurora sin servidor real, simulen `fetch` con respuestas `tool_use`.
+   - para MIA sin servidor real, simulen `fetch` con respuestas `tool_use`.
 3. Compilar el firmware sin advertencias.
 4. Si cambia el hardware: actualicen [`specs/03-hardware.md`](specs/03-hardware.md) y la maqueta 3D.
 

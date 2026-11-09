@@ -64,9 +64,9 @@ struct Regla    { char id[6]; char sensor[3]; char op; float x; uint8_t disp; in
 | Sensor | Función | Frecuencia | Procesamiento |
 |---|---|---|---|
 | PIR | `leerPresencia()` + `isrPir` | Cada vuelta del loop | La señal cuenta como "alto" si el pin está en ALTO o si la interrupción marcó un flanco. `presenciaDesde` guarda el inicio de la detección **continua** y vuelve a 0 tras `PIR_LIBRE_MS` (1.5 s) sin señal. `presencia = presenciaDesde ≠ 0`. |
-| Suelo | `leerSuelo()` | Cada `SUELO_CADA_MS` (3 s) | Enciende `PIN_SUELO_VCC`, espera 30 ms sin bloquear, promedia 8 lecturas, apaga. Mapea de `SUELO_SECO`..`SUELO_MOJADO` a 0..100 %. |
+| Suelo | `leerSuelo()` | Cada `SUELO_CADA_MS` (3 s) | Si hay `PIN_SUELO_VCC`, lo enciende y espera 30 ms sin bloquear; promedia 8 lecturas y lo apaga. Mapea de `SUELO_SECO`..`SUELO_MOJADO` a 0..100 %. |
 | DHT22 | `leerSensores()` | Cada 2 s, fuera del mutex | Tras **5 fallos seguidos**, la temperatura y la humedad quedan en `NAN` ("sin lectura") |
-| LDR | `leerSensores()` | Cada 500 ms | Promedio de 8 lecturas, de 0..4095 a 0..100 %. Más luz = número mayor. |
+| LDR | `leerSensores()` | Cada 500 ms | Promedio de 8 lecturas, de 0..`LDR_MAX` a 0..100 %. Más luz = número mayor. |
 | Hora | `leerSensores()` | Cada 500 ms | NTP (`pool.ntp.org`, zona `CST6`) → `horaMin` HHMM, o −1 si no hay hora |
 
 `DEPURAR_SENSORES 1` imprime cada 3 s los valores crudos del suelo y del LDR.
@@ -149,7 +149,7 @@ Modo estación. Si se desconecta, reintenta cada 15 s. Al arrancar llama a `conf
 |---|---|
 | Cliente | `WiFiClientSecure` con `setInsecure()` (solo para la demo) |
 | Servidor | `MQTT_HOST:8883` |
-| ID de cliente | `esp32-casa01-<aleatorio>` |
+| ID de cliente | `esp32-casa01`, fijo: al reconectar, el broker cierra la sesión vieja y su último deseo ("0") sale antes del "1" nuevo |
 | Último deseo (LWT) | `casa/casa01/online = "0"`, retenido |
 | Al conectar | Publica `online = "1"`, se suscribe a `cmd` y vuelve a publicar la configuración |
 | Reintento | Cada 5 s |
@@ -183,12 +183,15 @@ La casa arranca en **automático**, con todo apagado.
 
 | Constante | Valor | Uso |
 |---|---|---|
-| `PIN_PIR`, `PIN_DHT`, `PIN_SUELO`, `PIN_SUELO_VCC`, `PIN_LDR` | 27, 4, 34, 32, 35 | Sensores |
-| `PIN_RELE_LUZ_INT`, `PIN_RELE_VENT`, `PIN_RELE_BOMBA`, `PIN_RELE_LUZ_EXT` | 26, 25, 33, 23 | Relés 1 a 4 |
-| `PIN_BUZZER` | 18 | Alarma |
+| `PIN_PIR`, `PIN_DHT`, `PIN_SUELO`, `PIN_LDR` | 27, 21, 35, 34 | Sensores |
+| `PIN_SUELO_VCC` | −1 | Sensor de suelo alimentado siempre (con un GPIO, se enciende solo al medir) |
+| `LDR_SUBE_CON_LUZ` | true | Sentido del divisor del LDR (comprobado: sube con la luz) |
+| `LDR_MAX` | 1600 | Lectura con mucha luz, equivale a 100 % (con linterna: 1200–1575) |
+| `PIN_RELE_LUZ_INT`, `PIN_RELE_LUZ_EXT` | 19, 22 | Relés de los focos |
+| `PIN_VENT`, `PIN_BOMBA`, `PIN_BUZZER` | 23, 26, 25 | Transistores 2N2222 (ALTO = encendido) |
 | `RELE_ACTIVO_BAJO` | true | Polaridad de los relés |
 | `DEPURAR_SENSORES` | 0 | Calibración |
-| `SUELO_SECO`, `SUELO_MOJADO` | 4000, 1500 | **Calibrar con el sensor real** |
+| `SUELO_SECO`, `SUELO_MOJADO` | 4095, 2800 | Calibrados el 9 nov 2026 (al aire: 4095; en agua: ≈2790) |
 | `SUELO_CADA_MS`, `SUELO_ESPERA_MS` | 3000, 30 | Medición del suelo |
 | `DEF_TEMP_MAX`, `DEF_SUELO_MIN`, `DEF_LUZ_NOCHE`, `DEF_ALARMA_SEG` | 28.0, 35, 25, 5 | Umbrales por defecto |
 | `HIST_TEMP`, `HIST_LUZ`, `HIST_SUELO` | 0.5, 10, 10 | Histéresis |

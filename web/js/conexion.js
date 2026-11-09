@@ -85,8 +85,15 @@ export function conectarMqtt({ mqttUrl, mqttUsuario, mqttClave, idCasa }) {
   clienteMqtt.on("error", (e) => console.warn("MQTT:", e.message));
   clienteMqtt.on("message", (topico, datos) => {
     const texto = new TextDecoder().decode(datos);
-    if (topico === topicos.estado) recibirEstado(texto);
-    else if (topico === topicos.config) recibirConfig(texto);
+    if (topico === topicos.estado) {
+      // Si llega el estado, el ESP32 esta en linea aunque el aviso "online"
+      // retenido diga "0" (puede ser el ultimo deseo atrasado de una conexion vieja).
+      if (!casa.esp32EnLinea) {
+        casa.esp32EnLinea = true;
+        emitir("conexion");
+      }
+      recibirEstado(texto);
+    } else if (topico === topicos.config) recibirConfig(texto);
     else if (topico === topicos.online) {
       casa.esp32EnLinea = texto === "1";
       emitir("conexion");

@@ -4,7 +4,7 @@ WiFi (MQTT) y Bluetooth (BLE) transportan **exactamente las mismas cadenas JSON*
 
 ## 5.1 Canales
 
-### MQTT (HiveMQ Cloud)
+### MQTT (EMQX Cloud Serverless)
 | Tópico | Sentido | Retenido | Contenido |
 |---|---|---|---|
 | `casa/<ID_CASA>/estado` | ESP32 → página | No | Estado, cada 1 s |
@@ -14,9 +14,10 @@ WiFi (MQTT) y Bluetooth (BLE) transportan **exactamente las mismas cadenas JSON*
 
 - `ID_CASA` es `casa01` por defecto.
 - El ESP32 usa TLS en el puerto 8883.
-- La página usa `wss://<host>:8884/mqtt` con mqtt.js 5.10.1.
+- La página usa `wss://<host>:8084/mqtt` con mqtt.js 5.10.1.
 - Todo se publica con QoS 0.
-- Hay dos usuarios en HiveMQ: `esp32-casa` y `web-casa`.
+- Hay dos usuarios en EMQX: `esp32-casa` y `web-casa`.
+- Se cambió de HiveMQ a EMQX porque HiveMQ dejó de crear brokers Serverless gratuitos (30 sep 2026) y los apaga el 31 dic 2026.
 
 ### Bluetooth LE (GATT)
 | Característica | UUID | Propiedades |
@@ -69,7 +70,7 @@ Los valores de los dispositivos son los que el ESP32 está aplicando (después d
 ```
 
 ### Umbrales (`u`)
-| Clave | Nombre en la interfaz | Nombre para Aurora | Unidad | Rango | Paso | Por defecto |
+| Clave | Nombre en la interfaz | Nombre para MIA | Unidad | Rango | Paso | Por defecto |
 |---|---|---|---|---|---|---|
 | `tmax` | Temperatura para encender el ventilador | `temp_max` | °C | 20–35 | 0.5 | 28 |
 | `smin` | Humedad mínima del suelo (riega abajo de esto) | `humedad_suelo_min` | % | 10–80 | 1 | 35 |
@@ -118,7 +119,7 @@ página → {"c":"alarma","v":0}    → al=0, as=1 (la persona sigue ahí)
 ...      la persona se va: 1.5 s sin señal → p=0, as=0 (alarma rearmada)
 ```
 
-### Aurora enciende el ventilador estando en automático
+### MIA enciende el ventilador estando en automático
 ```
 página → {"c":"modo","v":"M"}          espera estado.m == "M"
 página → {"c":"set","d":"f","v":1}     espera estado.f == 1

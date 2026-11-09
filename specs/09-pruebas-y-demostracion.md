@@ -10,9 +10,9 @@
 | S4 | Validaciones del Worker | Peticiones con `OPTIONS`, ruta incorrecta, `Origin` incorrecto, sin código, JSON inválido, formato inválido, clave falsa | 204, 404, 403, 401, 400, 400, 500 | ✅ |
 | S5 | Foco interior en automático | `?demo=1`, modo automático, tocar el interruptor del foco interior | Se enciende; su estado dice "Encendido · desde la página"; los demás interruptores siguen deshabilitados | ✅ |
 | S6 | Alarma en modo demo | "Simular una persona" | A los 2 s: "Hay alguien", sin alarma. A los 7 s: alarma "Sonando", aviso rojo, mensaje emergente y entrada en el historial. "Desactivar alarma" → "Alarma silenciada". Cuando la persona se va → todo normal. | ✅ |
-| S7 | Herramientas de Aurora | Respuestas `tool_use` simuladas | Enciende el foco interior en automático; rechaza el ventilador en automático; cambia el tiempo de alarma; pasa a manual y enciende el ventilador; rechaza una regla con el foco interior; crea una regla con el foco exterior; `silenciar_alarma` sin alarma responde "ya estaba en silencio" | ✅ |
-| S8 | Diseño adaptable | Ancho de 375 px, tema claro y oscuro | Sin desplazamiento horizontal; pestañas Casa / Aurora | ✅ (diseño anterior; la estructura no cambió) |
-| S9 | Aurora con la API real | Worker desplegado y clave real | Respuestas por voz, acciones confirmadas | ⏳ Pendiente |
+| S7 | Herramientas de MIA | Respuestas `tool_use` simuladas | Enciende el foco interior en automático; rechaza el ventilador en automático; cambia el tiempo de alarma; pasa a manual y enciende el ventilador; rechaza una regla con el foco interior; crea una regla con el foco exterior; `silenciar_alarma` sin alarma responde "ya estaba en silencio" | ✅ |
+| S8 | Diseño adaptable | Anchos de 375 y 1440 px, tema oscuro | Sin desplazamiento horizontal; pestañas inferiores en celular | ✅ (interfaz MIA) |
+| S9 | MIA con la API real | Worker desplegado y clave real | Respuestas por voz, acciones confirmadas | ✅ 9 nov: responde con Claude Haiku 5.5 y controla la casa real |
 
 ## 9.2 Puesta en marcha del hardware
 
@@ -54,18 +54,18 @@ Se sigue el orden de los 12 pasos de la maqueta 3D. Medir **antes** de conectar 
 | Requisito | Prueba | Aprobada si… |
 |---|---|---|
 | R1 PC | Abrir la página en la laptop | Sensores y dispositivos en vivo |
-| R2 Celular | Abrir la página en un Android con Chrome | Pestañas Casa / Aurora funcionando |
+| R2 Celular | Abrir la página en un Android con Chrome | Pestañas inferiores y conversación funcionando |
 | R3 WiFi | Controlar con el Bluetooth apagado | Los cambios se aplican en ≤ 3.5 s |
 | R4 Bluetooth | Celular sin internet → conectar Bluetooth | Se controla la casa y se ven los sensores |
 | R5 Autonomía | Desconectar el internet del ESP32 | Foco exterior, ventilador, riego, alarma y reglas siguen funcionando |
 | R6 Manual | Cambiar a manual y mover cada dispositivo | Cada dispositivo responde; el foco interior también en automático |
 | R7 Tiempo real | Observar el panel, la gráfica y el aviso de la alarma | Se actualizan cada 1 a 2 s |
-| R9 Sin LEDs | Revisar los actuadores | 2 focos de 12 V por relé, ventilador, bomba y buzzer |
+| R9 Sin LEDs | Revisar los actuadores | 2 focos de 120 V por relé; ventilador, bomba y buzzer por transistor |
 | R10 5 dispositivos | Pasos 7 a 11 de 9.2 | Los 5 funcionan como se describe |
 
 ## 9.5 Guion de la presentación (≈8 minutos)
 
-1. **Introducción (30 s):** ESP32 con doble núcleo + página web + WiFi y Bluetooth + Aurora con Claude.
+1. **Introducción (30 s):** ESP32 con doble núcleo + página web + WiFi y Bluetooth + MIA con Claude.
 2. **Autonomía (2 min), en automático:**
    - tapar el LDR → se enciende el foco exterior; destapar → se apaga;
    - calentar el DHT22 → arranca el ventilador;
@@ -76,7 +76,7 @@ Se sigue el orden de los 12 pasos de la maqueta 3D. Medir **antes** de conectar 
    - desactivarla desde la página; luego la persona se aleja.
 4. **Foco interior y control manual por WiFi (1 min):** encender el foco interior desde la PC en automático; cambiar a manual y mover los demás.
 5. **Bluetooth (1 min):** celular sin internet → conectar por Bluetooth → controlar.
-6. **Aurora por voz (1.5 min):**
+6. **MIA por voz (1.5 min):**
    - "¿Cómo está la casa?";
    - "Enciende el foco de la sala";
    - "Después de las 10 de la noche apaga el foco de afuera".
@@ -88,7 +88,7 @@ Se sigue el orden de los 12 pasos de la maqueta 3D. Medir **antes** de conectar 
 - Llenar el tanque.
 - Cargar la laptop y el celular.
 - Abrir la página y activar las notificaciones.
-- Probar Aurora una vez.
+- Probar MIA una vez.
 - Revisar que el modo sea automático.
 
 ## 9.6 Fallas comunes
@@ -103,10 +103,10 @@ Se sigue el orden de los 12 pasos de la maqueta 3D. Medir **antes** de conectar 
 | El buzzer no suena | Transistor al revés o sin la resistencia de base | Revisar E · B · C y la resistencia de 1 kΩ |
 | La página no muestra el aviso | La página no estaba conectada cuando sonó, o el ESP32 se reinició | El aviso usa el contador `na`; si el ESP32 se reinició, el contador vuelve a 0 |
 | No llegan notificaciones | Permiso negado o la página cerrada | Volver a activar la opción y permitir en el navegador |
-| Temperatura "sin lectura" | DHT22 mal conectado | + a 3.3 V, out a GPIO 4, − a GND |
-| Humedad del suelo siempre en 0 o en 100 | Sin calibrar, o VCC no viene de GPIO 32 | Calibrar; revisar el cable |
+| Temperatura "sin lectura" | DHT22 mal conectado | + a 3.3 V, out a GPIO 21, − a GND |
+| Humedad del suelo siempre en 0 o en 100 | Sin calibrar, o el sensor no está bien conectado a GPIO 35 | Calibrar; revisar el cable |
 | La página dice "sin-casa" | El ESP32 no se conectó a MQTT | Revisar `secrets.h`, el WiFi y el monitor serie |
 | Bluetooth no aparece | Navegador no compatible o sin HTTPS | Chrome o Edge; usar la dirección de GitHub Pages |
-| Aurora: "Código de acceso incorrecto" | Ajustes distintos al secreto del Worker | Corregir el código en Ajustes |
+| MIA: "Código de acceso incorrecto" | Ajustes distintos al secreto del Worker | Corregir el código en Ajustes |
 | La compilación falla con `secrets.h: No such file` | Falta el archivo | Copiar `secrets.h.example` como `secrets.h` |
 | El programa no cabe | Partición normal | Elegir "Huge APP" |

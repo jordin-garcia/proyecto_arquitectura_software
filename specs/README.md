@@ -14,7 +14,7 @@ Describen **qué debe hacer** el sistema y **cómo está construido**. Cuando el
 | 4 | [Firmware del ESP32](04-firmware.md) | Tareas, sensores, automatización, alarma, memoria |
 | 5 | [Protocolo](05-protocolo.md) | MQTT, Bluetooth, JSON de estado, configuración y comandos |
 | 6 | [Página web](06-pagina-web.md) | Módulos, interfaz, avisos de la alarma, simulador, voz |
-| 7 | [Asistente Aurora](07-asistente-aurora.md) | Servidor, modelo, herramientas, ciclo de conversación |
+| 7 | [Asistente MIA](07-asistente-mia.md) | Servidor, modelo, herramientas, ciclo de conversación |
 | 8 | [Seguridad](08-seguridad.md) | Amenazas, secretos, validación y límites físicos |
 | 9 | [Pruebas y demostración](09-pruebas-y-demostracion.md) | Plan de pruebas, puesta en marcha, guion y fallas comunes |
 
@@ -25,10 +25,10 @@ Describen **qué debe hacer** el sistema y **cómo está construido**. Cuando el
 
   | # | Dispositivo | Sensor | Actuador | Comportamiento |
   |---|---|---|---|---|
-  | 1 | Foco interior | — | Relé 1 + foco LED de 12 V | Solo desde la página, en cualquier modo |
-  | 2 | Foco exterior | LDR | Relé 4 + foco LED de 12 V | Enciende sin luz; apaga con luz |
-  | 3 | Riego | Humedad del suelo | Relé 3 + bomba de 5 V | Riega con la tierra seca; para cuando está húmeda |
-  | 4 | Ventilador | DHT22 | Relé 2 + ventilador de 5 V | Enciende con calor; apaga cuando baja la temperatura |
+  | 1 | Foco interior | — | Relé + foco de 120 V | Solo desde la página, en cualquier modo |
+  | 2 | Foco exterior | LDR | Relé + foco de 120 V | Enciende sin luz; apaga con luz |
+  | 3 | Riego | Humedad del suelo | Transistor 2N2222 + bomba de 5 V | Riega con la tierra seca; para cuando está húmeda |
+  | 4 | Ventilador | DHT22 | Transistor 2N2222 + ventilador de 5 V | Enciende con calor; apaga cuando baja la temperatura |
   | 5 | Alarma | PIR | Buzzer activo con transistor | Persona detectada 5 s seguidos: suena y avisa a la página. Se apaga cuando ya no hay nadie o desde la página. |
 
 - **Modos:**
@@ -36,22 +36,23 @@ Describen **qué debe hacer** el sistema y **cómo está construido**. Cuando el
   - Manual: órdenes desde la PC o el celular, con botones o con voz.
   - El foco interior se controla desde la página en los dos modos.
 - **Conexiones:**
-  - WiFi: MQTT con TLS a HiveMQ Cloud.
+  - WiFi: MQTT con TLS a EMQX Cloud Serverless.
   - Bluetooth: BLE GATT con Web Bluetooth.
   - La página prefiere Bluetooth cuando está conectada.
 - **Interfaz:** una sola página web estática en GitHub Pages, adaptada a PC y celular.
-- **IA:** Aurora usa Claude Opus 5.5 a través de un Cloudflare Worker. Claude decide; la página ejecuta en el ESP32; el ESP32 valida.
+- **IA:** MIA usa Claude Haiku 5.5 (esfuerzo alto) a través de un Cloudflare Worker. Claude decide; la página ejecuta en el ESP32; el ESP32 valida.
 - **Referencia visual:** la [maqueta 3D interactiva](https://claude.ai/artifact/YVD5HeXeccF4JXbPQwJwjb) muestra cada pieza y cada cable de pin a pin.
 
-## Estado actual (30 de octubre de 2026)
+## Estado actual (9 de noviembre de 2026)
 
 | Parte | Estado |
 |---|---|
-| Firmware | Reescrito para los 5 dispositivos actuales. Compila sin errores ni advertencias: programa al 40 %, RAM global al 18 %. **No se ha probado en la placa real.** |
-| Página web | Probada con el simulador: foco interior en automático, alarma por presencia con aviso, historial y desactivación, modos, reglas y umbrales |
-| Aurora | Ciclo de herramientas probado con un servidor simulado. **Falta probarla con la API real.** |
-| Servidor | Validaciones probadas localmente; empaquetado verificado con `wrangler deploy --dry-run` |
-| Hardware | En compra y armado. La maqueta 3D es la referencia de cableado. |
+| Firmware | Probado en la placa real con el cableado de la maqueta. Se conecta al WiFi, a EMQX y por Bluetooth. Sensores calibrados. Compila sin errores ni advertencias: programa al 40 %, RAM global al 18 %. |
+| Página web | Conectada a la casa real por WiFi (EMQX) y Bluetooth al mismo tiempo |
+| MIA | Probada con la API real a través del servidor publicado |
+| Servidor | Publicado en Cloudflare: `https://casa-ia-asistente.engineer-jordin.workers.dev` |
+| Broker MQTT | EMQX Cloud Serverless (HiveMQ dejó de crear brokers gratuitos) |
+| Hardware | Armado y probado. Pendiente: aislar empalmes de 120 V, diodos en ventilador y bomba, confirmar 3.3 V en el sensor de suelo. La maqueta 3D todavía muestra el diseño anterior. |
 
 ## Historial de cambios de diseño
 
@@ -59,3 +60,4 @@ Describen **qué debe hacer** el sistema y **cómo está construido**. Cuando el
 |---|---|
 | 29 oct 2026 | Diseño anterior: luces por presencia, clima, riego, cortinas con servo y detector de llama con rociador |
 | 30 oct 2026 | Diseño actual: foco interior manual, foco exterior con LDR, riego, ventilador y alarma por presencia (PIR + buzzer). Se retiraron el servo, la cortina, el detector de llama y la bomba del rociador. |
+| 8 nov 2026 | Cableado real de la maqueta: focos de 120 V por relé (foco interior en GPIO 19, exterior en GPIO 22); ventilador, bomba y buzzer por transistor 2N2222; DHT22 en GPIO 21; LDR en 34; suelo en 35, alimentado siempre. |

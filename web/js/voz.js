@@ -69,8 +69,11 @@ function elegirVoz() {
 }
 if (sintesisDisponible) speechSynthesis.addEventListener?.("voiceschanged", () => { vozElegida = null; elegirVoz(); });
 
-/** Lee un texto en voz alta. La promesa termina cuando acaba de hablar. */
-export function hablar(texto) {
+/**
+ * Lee un texto en voz alta. La promesa termina cuando acaba de hablar.
+ * alPalabra() se llama en cada palabra (sirve para mover la boca de MIA).
+ */
+export function hablar(texto, alPalabra) {
   if (!sintesisDisponible || !texto) return Promise.resolve();
   return new Promise((resolver) => {
     const frase = new SpeechSynthesisUtterance(texto);
@@ -78,6 +81,7 @@ export function hablar(texto) {
     if (voz) frase.voice = voz;
     frase.lang = voz?.lang || "es-MX";
     frase.rate = 1.05;
+    frase.onboundary = () => alPalabra?.();
     frase.onend = resolver;
     frase.onerror = resolver;
     speechSynthesis.speak(frase);
@@ -86,4 +90,40 @@ export function hablar(texto) {
 
 export function callar() {
   if (sintesisDisponible) speechSynthesis.cancel();
+}
+
+// --------------------------- Nivel del microfono ---------------------------
+/**
+ * Mide el volumen del microfono mientras la persona habla (0 a 1) para animar a MIA.
+ * Devuelve una funcion para detener la medicion. Si no hay permiso, no hace nada.
+ */
+export async function medirMicrofono(alNivel) {
+  if (!navigator.mediaDevices?.getUserMedia) return () => {};
+  let flujo, ctx, cuadro = 0;
+  try {
+    flujo = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC();
+    const analizador = ctx.createAnalyser();
+    analizador.fftSize = 512;
+    ctx.createMediaStreamSource(flujo).connect(analizador);
+    const datos = new Uint8Array(analizador.fftSize);
+    const medir = () => {
+      analizador.getByteTimeDomainData(datos);
+      let suma = 0;
+      for (const v of datos) suma += ((v - 128) / 128) ** 2;
+      alNivel(Math.min(1, Math.sqrt(suma / datos.length) * 5));
+      cuadro = requestAnimationFrame(medir);
+    };
+    medir();
+  } catch {
+    flujo?.getTracks().forEach((t) => t.stop());
+    return () => {};
+  }
+  return () => {
+    cancelAnimationFrame(cuadro);
+    flujo.getTracks().forEach((t) => t.stop());
+    ctx.close().catch(() => {});
+    alNivel(0);
+  };
 }

@@ -3,131 +3,330 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f8f7e">
-  <title>Casa IA</title>
+  <meta name="theme-color" content="#030b1d">
+  <meta name="color-scheme" content="dark">
+  <title>MIA · Hogar Inteligente</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.45' cy='.4'%3E%3Cstop offset='0' stop-color='%23aaf6ff'/%3E%3Cstop offset='.6' stop-color='%231ea7ff'/%3E%3Cstop offset='1' stop-color='%230a3c9a'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='28' fill='url(%23g)'/%3E%3Cpath d='M19 30q5-7 10 0M35 30q5-7 10 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="estilos.css">
   <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <header class="barra">
-    <div class="marca"><i data-icono="casa"></i><span>Casa IA</span></div>
-    <div class="conexiones">
-      <button id="btnWifi" class="chip" data-estado="desconectado" title="Conexión por internet (WiFi)">
-        <i data-icono="wifi"></i><span>WiFi</span>
-      </button>
-      <button id="btnBle" class="chip" data-estado="desconectado" title="Conectar por Bluetooth">
-        <i data-icono="bluetooth"></i><span>Bluetooth</span>
-      </button>
-    </div>
-    <div class="modo" role="group" aria-label="Modo de la casa">
-      <button id="modoAuto" class="segmento" type="button">Automático</button>
-      <button id="modoManual" class="segmento" type="button">Manual</button>
-    </div>
-    <button id="btnAjustes" class="icono-btn" type="button" aria-label="Ajustes" title="Ajustes"><i data-icono="ajustes"></i></button>
-  </header>
+  <!-- Logotipo de MIA reutilizable -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="gradLogo" x1="0" y1="0" x2="108" y2="0" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset=".45" stop-color="#bff4ff"/>
+        <stop offset="1" stop-color="#35d6ff"/>
+      </linearGradient>
+      <symbol id="logoMia" viewBox="0 0 108 36">
+        <path d="M5 33V4l17 21L39 4v29" fill="none" stroke="url(#gradLogo)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M55 4v29" fill="none" stroke="url(#gradLogo)" stroke-width="4.6" stroke-linecap="round"/>
+        <path d="M70 33 86.5 4 103 33" fill="none" stroke="url(#gradLogo)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+    </defs>
+  </svg>
 
-  <div id="aviso" class="aviso" role="status" hidden></div>
+  <canvas id="fondo" class="fondo" aria-hidden="true"></canvas>
+  <div class="viñeta-alarma" aria-hidden="true"></div>
 
-  <main class="contenido">
-    <section id="panelCasa" class="panel-casa">
-      <div id="alertaAlarma" class="alerta-alarma" role="alert" hidden>
-        <i data-icono="campana"></i>
-        <div class="alerta-texto">
-          <strong id="alertaTitulo">¡Persona detectada! La alarma está sonando</strong>
-          <span id="alertaDetalle">El sensor de movimiento detectó a alguien durante más de 5 segundos.</span>
+  <div class="marco" id="marco">
+    <!-- ============================ Encabezado ============================ -->
+    <header class="cabecera">
+      <button id="btnMenu" class="btn-redondo solo-movil" type="button" aria-label="Abrir menú"><i data-icono="menu"></i></button>
+      <a class="logo" href="#" aria-label="MIA, inicio" data-ir="inicio">
+        <span class="logo-casa"><i data-icono="casa"></i></span>
+        <svg class="logo-texto" viewBox="0 0 108 36" aria-hidden="true"><use href="#logoMia"/></svg>
+      </a>
+      <span class="lema">Asistente de Hogar Inteligente</span>
+
+      <div class="comando" id="comando">
+        <i data-icono="buscar"></i>
+        <input id="entradaComando" type="text" autocomplete="off" spellcheck="false"
+          placeholder="Buscar dispositivos, escenas o ajustes…" aria-label="Buscar o pedirle algo a MIA"
+          role="combobox" aria-expanded="false" aria-controls="resultadosComando" aria-autocomplete="list">
+        <kbd>Ctrl K</kbd>
+        <i data-icono="filtros"></i>
+        <ul id="resultadosComando" class="resultados" role="listbox" hidden></ul>
+      </div>
+
+      <div class="cab-acciones">
+        <button id="btnBuscar" class="btn-redondo solo-movil" type="button" aria-label="Buscar"><i data-icono="buscar"></i></button>
+        <div class="ancla">
+          <button id="btnNotif" class="btn-redondo" type="button" aria-label="Notificaciones" aria-expanded="false">
+            <i data-icono="campana"></i><span id="insignia" class="insignia" hidden>0</span>
+          </button>
+          <div id="panelNotif" class="desplegable" hidden>
+            <div class="desp-titulo">Notificaciones <button type="button" id="btnLimpiarNotif" class="enlace">Limpiar</button></div>
+            <ul id="listaNotif" class="lista-notif"></ul>
+          </div>
         </div>
-        <button id="btnSilenciar" type="button" class="boton">Desactivar alarma</button>
-      </div>
-
-      <div class="seccion-titulo">
-        <h2>Sensores</h2>
-        <button id="btnDemoPersona" type="button" class="boton-sec" hidden>Simular una persona</button>
-        <span id="frescura" class="frescura">Sin datos</span>
-      </div>
-      <div id="sensores" class="grid-sensores"></div>
-
-      <div class="seccion-titulo">
-        <h2>Dispositivos</h2>
-        <span id="notaModo" class="nota-modo"></span>
-      </div>
-      <div id="dispositivos" class="grid-dispositivos"></div>
-
-      <div class="fila-2">
-        <section class="tarjeta">
-          <h3>Últimos 5 minutos</h3>
-          <div class="grafica"><canvas id="grafica" aria-label="Gráfica de temperatura y humedad del suelo"></canvas></div>
-        </section>
-        <section class="tarjeta">
-          <h3>Reglas personalizadas</h3>
-          <ul id="reglas" class="reglas"></ul>
-          <p class="pista">Pídele a Aurora que cree reglas, por ejemplo: “después de las 10 de la noche apaga el foco exterior”. Funcionan en modo automático, incluso sin internet.</p>
-        </section>
-      </div>
-
-      <section class="tarjeta">
-        <h3>Alertas de la alarma</h3>
-        <ul id="historialAlertas" class="reglas"></ul>
-        <label class="pista opcion-notif"><input type="checkbox" id="optNotificaciones"> Avisarme también con notificaciones del navegador</label>
-      </section>
-
-      <section class="tarjeta">
-        <h3>Umbrales de automatización</h3>
-        <form id="formUmbrales" class="umbrales">
-          <div id="camposUmbrales" class="campos-umbrales"></div>
-          <button type="submit" class="boton">Guardar cambios</button>
-        </form>
-      </section>
-    </section>
-
-    <aside id="panelAsistente" class="panel-asistente">
-      <div class="asistente-cabecera">
-        <div id="orbe" class="orbe" data-estado="reposo" aria-hidden="true"><span></span></div>
-        <div class="asistente-nombre">
-          <h2>Aurora</h2>
-          <p id="estadoAsistente">Lista para ayudarte</p>
+        <div class="ancla">
+          <button id="btnHogar" class="btn-hogar" type="button" aria-expanded="false">
+            <span class="hogar-icono"><i data-icono="casa"></i></span><span class="hogar-texto">Mi Hogar</span><i data-icono="abajo"></i>
+            <span id="puntoHogar" class="punto" data-estado="desconectado"></span>
+          </button>
+          <div id="panelHogar" class="desplegable desp-hogar" hidden>
+            <div class="desp-titulo">Conexión con la casa</div>
+            <button type="button" id="btnWifi" class="fila-conexion" data-estado="desconectado">
+              <span class="fc-icono"><i data-icono="wifi"></i></span>
+              <span class="fc-texto"><strong>WiFi (MQTT)</strong><small>Sin configurar</small></span>
+              <span class="fc-punto"></span>
+            </button>
+            <button type="button" id="btnBle" class="fila-conexion" data-estado="desconectado">
+              <span class="fc-icono"><i data-icono="bluetooth"></i></span>
+              <span class="fc-texto"><strong>Bluetooth</strong><small>Desconectado</small></span>
+              <span class="fc-punto"></span>
+            </button>
+            <button type="button" class="fila-conexion" data-ir="ajustes">
+              <span class="fc-icono"><i data-icono="ajustes"></i></span>
+              <span class="fc-texto"><strong>Ajustes de conexión</strong><small>Servidor MQTT y de MIA</small></span>
+            </button>
+          </div>
         </div>
-        <button id="btnNueva" class="icono-btn" type="button" aria-label="Nueva conversación" title="Nueva conversación"><i data-icono="nueva"></i></button>
+      </div>
+    </header>
+
+    <div class="cuerpo">
+      <!-- ============================ Menú lateral ============================ -->
+      <nav class="lateral" id="lateral" aria-label="Secciones">
+        <button type="button" data-ir="inicio" class="activo"><i data-icono="casa"></i><span>Inicio</span></button>
+        <button type="button" data-ir="dispositivos"><i data-icono="dispositivos"></i><span>Dispositivos</span></button>
+        <button type="button" data-ir="escenas"><i data-icono="escenas"></i><span>Escenas</span></button>
+        <button type="button" data-ir="sensores"><i data-icono="hoja"></i><span>Sensores</span></button>
+        <button type="button" data-ir="historial"><i data-icono="grafica"></i><span>Historial</span></button>
+        <button type="button" data-ir="automatizaciones"><i data-icono="robot"></i><span>Automatizaciones</span></button>
+        <button type="button" data-ir="ajustes"><i data-icono="ajustes"></i><span>Ajustes</span></button>
+        <img class="planta" src="img/planta.png" alt="" width="512" height="512" loading="lazy">
+      </nav>
+
+      <!-- ============================ Escenario de MIA ============================ -->
+      <div class="col-mia">
+      <section class="escenario" id="escenario" aria-label="Asistente MIA">
+        <div class="esc-fondo" aria-hidden="true"></div>
+
+        <div id="alertaAlarma" class="alerta-alarma" role="alert" hidden>
+          <span class="alerta-icono"><i data-icono="sirena"></i></span>
+          <div class="alerta-texto">
+            <strong id="alertaTitulo">¡Persona detectada! La alarma está sonando</strong>
+            <span id="alertaDetalle">El sensor de movimiento detectó a alguien.</span>
+          </div>
+          <button id="btnSilenciar" type="button" class="boton boton-peligro">Desactivar alarma</button>
+        </div>
+
+        <div class="esc-titulos">
+          <h1 class="saludo">Hola, soy <svg class="logo-saludo" viewBox="0 0 108 36" role="img" aria-label="MIA"><use href="#logoMia"/></svg></h1>
+          <p class="esc-sub">Tu asistente inteligente de domótica</p>
+        </div>
+
+        <div class="mia-zona">
+          <button id="miaPrincipal" class="mia-host" type="button" aria-label="Toca a MIA para hablarle"></button>
+        </div>
+
+        <div class="subtitulo" aria-live="polite">
+          <p id="textoMia" class="texto-mia">¿En qué puedo ayudarte hoy?</p>
+          <div id="accionesMia" class="acciones-mia"></div>
+        </div>
+
+        <div class="sugerencias" id="sugerencias">
+          <button type="button" class="chip-sug" data-frase="Enciende la luz de la sala"><i data-icono="foco"></i>Encender la luz</button>
+          <button type="button" class="chip-sug" data-frase="Activa el modo película"><i data-icono="pelicula"></i>Activar una escena</button>
+          <button type="button" class="chip-sug" data-frase="¿Cuál es la temperatura?"><i data-icono="termometro"></i>Ver la temperatura</button>
+        </div>
+
+        <div class="voz-control" id="vozControl">
+          <div class="onda izq" aria-hidden="true"></div>
+          <button id="btnMic" class="mic" type="button" aria-label="Hablar con MIA"><i data-icono="microfono"></i></button>
+          <div class="onda der" aria-hidden="true"></div>
+        </div>
+        <div class="voz-pie">
+          <button id="btnHablar" type="button" class="pastilla-hablar">Presiona para hablar</button>
+          <button id="btnTeclado" type="button" class="btn-redondo pequeño" aria-label="Escribirle a MIA" title="Escribirle a MIA"><i data-icono="teclado"></i></button>
+        </div>
+
+        <div class="rapidos solo-movil" id="rapidos">
+          <button type="button" data-rapido="luz_interior"><i data-icono="foco"></i><span>Luces</span></button>
+          <button type="button" data-rapido="alarma"><i data-icono="sirena"></i><span>Alarma</span></button>
+          <button type="button" data-ir="sensores"><i data-icono="termometro"></i><span>Clima</span></button>
+          <button type="button" data-ir="escenas"><i data-icono="escenas"></i><span>Escenas</span></button>
+        </div>
+
+        <svg class="esc-olas" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+          <path class="ola o1" d="M0 70 Q150 30 300 70 T600 70 T900 70 T1200 70 T1500 70 T1800 70 T2100 70 T2400 70 V120 H0Z"/>
+          <path class="ola o2" d="M0 88 Q300 58 600 88 T1200 88 T1800 88 T2400 88 V120 H0Z"/>
+        </svg>
+      </section>
+      <footer class="pie-estado">
+        <i data-icono="hoja"></i>
+        <span>Hogar Inteligente</span><span class="sep">•</span>
+        <span id="pieConexion">Sin conexión</span><span class="sep">•</span>
+        <span id="pieMia">MIA lista para ayudar</span>
+      </footer>
       </div>
 
-      <div id="chat" class="chat" aria-live="polite"></div>
+      <!-- ============================ Columna de paneles ============================ -->
+      <main class="columna" id="columna">
+        <div class="vista" data-vista="inicio">
 
-      <div id="sugerencias" class="sugerencias">
-        <button type="button">¿Cómo está la casa?</button>
-        <button type="button">Activa el modo noche</button>
-        <button type="button">Enciende el foco de la sala</button>
-        <button type="button">Me voy de la casa</button>
-      </div>
+          <section class="panel" id="panelDispositivos" style="--i:0">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="escenas"></i></span>
+              <div class="panel-titulos"><h2>Dispositivos del Hogar</h2><p>Controla y supervisa tus dispositivos</p></div>
+              <div class="modo" role="group" aria-label="Modo de la casa">
+                <button id="modoAuto" class="segmento" type="button">Auto</button>
+                <button id="modoManual" class="segmento" type="button">Manual</button>
+              </div>
+            </header>
+            <div id="dispositivos" class="grid-disp"></div>
+            <p id="notaModo" class="nota-modo"></p>
+          </section>
 
-      <form id="formChat" class="entrada">
-        <button type="button" id="btnMic" class="mic" aria-label="Hablar con Aurora"><i data-icono="microfono"></i></button>
-        <input id="textoChat" autocomplete="off" placeholder="Escribe o toca el micrófono…" aria-label="Mensaje para Aurora">
-        <button type="submit" class="enviar" aria-label="Enviar"><i data-icono="enviar"></i></button>
-      </form>
-      <div class="opciones-voz">
-        <label><input type="checkbox" id="optVoz" checked> Responder con voz</label>
-        <label><input type="checkbox" id="optContinua"> Conversación continua</label>
-      </div>
-    </aside>
-  </main>
+          <section class="panel" id="panelEscenas" style="--i:1">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="pelicula"></i></span>
+              <div class="panel-titulos"><h2>Escenas Inteligentes</h2><p>Acciones predefinidas para tu hogar</p></div>
+              <button type="button" class="enlace" data-ir="automatizaciones">Gestionar escenas <i data-icono="derecha"></i></button>
+            </header>
+            <div id="escenas" class="grid-escenas"></div>
+          </section>
 
-  <nav class="pestanas" aria-label="Secciones">
-    <button type="button" data-panel="casa" class="activa"><i data-icono="casa"></i>Casa</button>
-    <button type="button" data-panel="asistente"><i data-icono="chispa"></i>Aurora</button>
+          <section class="panel" id="panelSensores" style="--i:2">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="pulso"></i></span>
+              <div class="panel-titulos"><h2>Sensores del Hogar</h2><p>Monitorea el entorno en tiempo real</p></div>
+              <button id="btnDemoPersona" type="button" class="enlace" hidden><i data-icono="correr"></i> Simular una persona</button>
+            </header>
+            <div id="sensores" class="grid-sensores"></div>
+          </section>
+
+          <section class="panel" id="panelEsp" style="--i:3">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="chip"></i></span>
+              <div class="panel-titulos"><h2>Estado de la ESP32</h2><p>Conexión y funcionamiento del sistema</p></div>
+              <span id="pillEsp" class="pill" data-estado="no">Sin conexión</span>
+            </header>
+            <div class="fila-esp">
+              <button type="button" id="espWifi" class="esp-item" data-estado="desconectado"><i data-icono="wifi"></i><span>WiFi</span></button>
+              <button type="button" id="espBle" class="esp-item" data-estado="desconectado"><i data-icono="bluetooth"></i><span>Bluetooth</span></button>
+              <span id="espChip" class="esp-item"><i data-icono="chip"></i><span>ESP32</span></span>
+              <span id="espSalud" class="esp-item esp-salud"><span class="señal"><i></i><i></i><i></i><i></i></span><span>Sin datos</span></span>
+            </div>
+          </section>
+
+          <section class="panel" id="panelHistorial" style="--i:4">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="rayo"></i></span>
+              <div class="panel-titulos"><h2>Historial de Sensores</h2><p>Lecturas del último minuto (promedio cada 10 s)</p></div>
+              <label class="selector">
+                <span class="oculto">Sensor de la gráfica</span>
+                <select id="selMetrica">
+                  <option value="t">Temperatura</option>
+                  <option value="h">Humedad del aire</option>
+                  <option value="s">Humedad del suelo</option>
+                  <option value="l">Luz exterior</option>
+                </select>
+                <i data-icono="abajo"></i>
+              </label>
+            </header>
+            <div class="historial">
+              <div class="hist-resumen">
+                <span class="hr-titulo"><i data-icono="hoja"></i> <span id="histNombre">Actual</span></span>
+                <strong id="histValor">—</strong>
+                <span id="histTendencia" class="tendencia">—</span>
+                <small>vs. hace un minuto</small>
+              </div>
+              <div class="hist-grafica">
+                <div class="eje-y" id="ejeY"></div>
+                <div class="barras" id="barras"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ======================= Vista de automatizaciones ======================= -->
+        <div class="vista" data-vista="automatizaciones" hidden>
+          <section class="panel" style="--i:0">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="robot"></i></span>
+              <div class="panel-titulos"><h2>Reglas personalizadas</h2><p>Funcionan en modo automático, incluso sin internet</p></div>
+              <button type="button" id="btnCrearRegla" class="enlace"><i data-icono="mas"></i> Crear con MIA</button>
+            </header>
+            <ul id="reglas" class="lista"></ul>
+            <p class="pista">Pídele a MIA, por ejemplo: “después de las 10 de la noche apaga el foco exterior”.</p>
+          </section>
+
+          <section class="panel" style="--i:1">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="filtros"></i></span>
+              <div class="panel-titulos"><h2>Umbrales de automatización</h2><p>El ESP32 valida cada valor antes de aplicarlo</p></div>
+            </header>
+            <form id="formUmbrales" class="umbrales">
+              <div id="camposUmbrales" class="campos-umbrales"></div>
+              <button type="submit" class="boton">Guardar cambios</button>
+            </form>
+          </section>
+
+          <section class="panel" style="--i:2">
+            <header class="panel-cab">
+              <span class="panel-icono"><i data-icono="escudo"></i></span>
+              <div class="panel-titulos"><h2>Alertas de la alarma</h2><p>Historial de esta visita</p></div>
+            </header>
+            <ul id="historialAlertas" class="lista"></ul>
+            <label class="interruptor-fila"><input type="checkbox" id="optNotificaciones"><span class="int"></span> Avisarme también con notificaciones del navegador</label>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============================ Pestañas del celular ============================ -->
+  <nav class="tabs-movil" aria-label="Secciones">
+    <button type="button" data-ir="inicio" class="activo"><i data-icono="casa"></i><span>Inicio</span></button>
+    <button type="button" data-ir="dispositivos"><i data-icono="dispositivos"></i><span>Dispositivos</span></button>
+    <button type="button" data-ir="escenas"><i data-icono="escenas"></i><span>Escenas</span></button>
+    <button type="button" data-ir="sensores"><i data-icono="hoja"></i><span>Sensores</span></button>
+    <button type="button" data-ir="ajustes"><i data-icono="ajustes"></i><span>Ajustes</span></button>
   </nav>
 
+  <!-- ============================ Conversación ============================ -->
+  <aside id="conversacion" class="conversacion" aria-label="Conversación con MIA" aria-hidden="true">
+    <header class="conv-cab">
+      <div id="miaChat" class="mia-chat" aria-hidden="true"></div>
+      <div class="conv-titulos">
+        <h2>Conversación con <svg class="logo-mini" viewBox="0 0 108 36" role="img" aria-label="MIA"><use href="#logoMia"/></svg></h2>
+        <p id="estadoAsistente">Lista para ayudarte</p>
+      </div>
+      <button id="btnNueva" class="btn-redondo pequeño" type="button" aria-label="Nueva conversación" title="Nueva conversación"><i data-icono="nueva"></i></button>
+      <button id="btnCerrarConv" class="btn-redondo pequeño" type="button" aria-label="Cerrar"><i data-icono="cerrar"></i></button>
+    </header>
+    <div id="chat" class="chat" aria-live="polite"></div>
+    <form id="formChat" class="entrada">
+      <button type="button" id="btnMicChat" class="mic-chico" aria-label="Hablar con MIA"><i data-icono="microfono"></i></button>
+      <input id="textoChat" autocomplete="off" placeholder="Escríbele a MIA…" aria-label="Mensaje para MIA">
+      <button type="submit" class="enviar" aria-label="Enviar"><i data-icono="enviar"></i></button>
+    </form>
+    <div class="opciones-voz">
+      <label class="interruptor-fila"><input type="checkbox" id="optVoz"><span class="int"></span> Responder con voz</label>
+      <label class="interruptor-fila"><input type="checkbox" id="optContinua"><span class="int"></span> Conversación continua</label>
+    </div>
+  </aside>
+  <div id="velo" class="velo" hidden></div>
+
+  <!-- ============================ Ajustes ============================ -->
   <dialog id="dlgAjustes" class="dialogo">
     <form id="formAjustes" method="dialog">
-      <h2>Ajustes de conexión</h2>
-      <p class="pista">Se guardan solo en este navegador. No se suben a GitHub.</p>
+      <header class="dlg-cab">
+        <span class="panel-icono"><i data-icono="ajustes"></i></span>
+        <div><h2>Ajustes</h2><p class="pista">Se guardan solo en este navegador. No se suben a GitHub.</p></div>
+      </header>
       <fieldset>
-        <legend>Casa por WiFi (HiveMQ Cloud)</legend>
+        <legend><i data-icono="wifi"></i> Casa por WiFi (EMQX Cloud)</legend>
         <label>Servidor MQTT (WebSocket)
-          <input name="mqttUrl" placeholder="wss://xxxx.s1.eu.hivemq.cloud:8884/mqtt" inputmode="url">
+          <input name="mqttUrl" placeholder="wss://xxxx.ala.us-east-1.emqxsl.com:8084/mqtt" inputmode="url">
         </label>
         <div class="dos-columnas">
           <label>Usuario<input name="mqttUsuario" autocomplete="off"></label>
@@ -136,11 +335,16 @@
         <label>ID de la casa<input name="idCasa" placeholder="casa01"></label>
       </fieldset>
       <fieldset>
-        <legend>Asistente (Cloudflare Worker)</legend>
+        <legend><i data-icono="chispa"></i> MIA (Cloudflare Worker)</legend>
         <label>Dirección del servidor
           <input name="servidorUrl" placeholder="https://casa-ia-asistente.su-cuenta.workers.dev" inputmode="url">
         </label>
         <label>Código de acceso<input name="codigoAcceso" type="password" autocomplete="off"></label>
+      </fieldset>
+      <fieldset class="preferencias">
+        <legend><i data-icono="volumen"></i> Experiencia</legend>
+        <label class="interruptor-fila"><input type="checkbox" name="sonidos"><span class="int"></span> Efectos de sonido</label>
+        <label class="interruptor-fila"><input type="checkbox" name="arranque"><span class="int"></span> Animación de inicio</label>
       </fieldset>
       <div class="acciones">
         <button type="button" id="btnCancelarAjustes" class="boton secundario">Cancelar</button>
@@ -148,5 +352,24 @@
       </div>
     </form>
   </dialog>
+
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <!-- ============================ Arranque ============================ -->
+  <div id="arranque" class="arranque" hidden>
+    <div class="arr-nucleo">
+      <svg class="arr-anillos" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="96" class="a1"/>
+        <circle cx="100" cy="100" r="84" class="a2"/>
+        <circle cx="100" cy="100" r="70" class="a3"/>
+        <circle cx="100" cy="100" r="56" class="a4"/>
+      </svg>
+      <div class="arr-esfera"></div>
+    </div>
+    <svg class="arr-logo" viewBox="0 0 108 36" aria-label="MIA"><use href="#logoMia"/></svg>
+    <ul class="arr-lineas" id="arrLineas"></ul>
+    <div class="arr-barra"><span id="arrProgreso"></span></div>
+    <p class="arr-saltar">Toca para continuar</p>
+  </div>
 </body>
 </html>

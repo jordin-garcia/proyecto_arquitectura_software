@@ -5,7 +5,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { SISTEMA, HERRAMIENTAS } from "./asistente.js";
 
-const MODELO = "claude-opus-5-5";
+const MODELO = "claude-haiku-5-5";
 const MAX_MENSAJES = 120;
 const MAX_BYTES = 400_000;
 
@@ -70,15 +70,13 @@ export default {
 
     const cliente = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
     try {
-      const r = await cliente.beta.messages.create({
+      // Haiku 5.5 no tiene respaldo automatico de modelo: si un filtro de
+      // seguridad rechaza la peticion, la pagina maneja el stop_reason "refusal".
+      const r = await cliente.messages.create({
         model: MODELO,
         max_tokens: 16000,
-        // Si un filtro de seguridad rechaza la peticion por error, Claude la
-        // reintenta automaticamente con el modelo de respaldo recomendado.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        // Esfuerzo bajo = respuestas mas rapidas, ideal para una conversacion por voz
-        output_config: { effort: "low" },
+        // Esfuerzo alto = la asistente razona mas antes de responder
+        output_config: { effort: "high" },
         // Guarda en cache las instrucciones y la conversacion para abaratar cada turno
         cache_control: { type: "ephemeral" },
         system: SISTEMA,

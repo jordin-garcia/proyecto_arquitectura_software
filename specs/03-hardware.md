@@ -13,7 +13,7 @@ Referencia visual: [maqueta 3D interactiva](https://claude.ai/artifact/YVD5HeXec
 | 1 | Sensor de humedad de suelo | Sonda **resistiva** de dos puntas + placa LM393 (VCC, GND, DO, AO) | D3 Riego |
 | 1 | Fotorresistencia | LDR de 5 mm (GL5528) | D2 Foco exterior |
 | 1 | Módulo de relés | 4 canales, bobina de 5 V (SRD-05VDC-SL-C), optoacoplador PC817, activación por nivel bajo, jumper VCC/JD-VCC | D1 a D4 |
-| 2 | Focos | LED de 12 V con portalámparas (el interior en plafonera E27, sin enchufe de 120 V) | D1, D2 |
+| 2 | Focos | De 120 V con portalámparas y enchufe; cada relé corta uno de los dos cables del enchufe | D1, D2 |
 | 1 | Ventilador | 5 V DC | D4 |
 | 1 | Mini bomba sumergible | 3 a 5 V DC | D3 |
 | ≈40 cm | Manguera de silicona | Del diámetro de la salida de la bomba | D3 |
@@ -110,6 +110,8 @@ Sin perforar la pared:
 
 ## 3.3 Alimentación
 
+> **Cambio (8 nov 2026).** Los dos focos son de **120 V** y se conectan al tomacorriente: el cable del enchufe llega al COM del relé y el foco sale del contacto NO. Ya no pasan por el bus de 12 V. El diagrama y las tablas de esta sección muestran el diseño anterior; la alimentación de los motores y los sensores se actualizará cuando se confirme cómo quedó armada.
+
 ```
 Adaptador 12 V 2 A ─► Jack hembra ─┬─► Bus 12 V ─┬─► COM1 ─► foco interior 12 V
                                    │             │     └─ puente ─► COM4 ─► foco exterior 12 V
@@ -154,19 +156,24 @@ Todas las tierras quedan unidas: Bus GND = IN− = OUT− del LM2596 = GND del M
 Fila izquierda, de la antena al USB: 3V3, EN, VP(36), VN(39), 34, 35, 32, 33, 25, 26, 27, 14, 12, GND, 13, SD2, SD3, CMD, 5V.
 Fila derecha: GND, 23, 22, TX, RX, 21, GND, 19, 18, 5, 17, 16, 4, 0, 2, 15, SD1, SD0, CLK.
 
-| GPIO | Fila | Dirección | Uso | Conecta a | Cable |
-|---|---|---|---|---|---|
-| 34 | izq. | ADC1_CH6 | Humedad de suelo, `PIN_SUELO` | AO de la placa LM393 | Dupont H-H |
-| 35 | izq. | ADC1_CH7 | Luz, `PIN_LDR` | Nodo del divisor LDR / 10 kΩ | Dupont M-H |
-| 32 | izq. | Salida | Alimenta el sensor de suelo, `PIN_SUELO_VCC` | VCC de la placa LM393 | Dupont H-H |
-| 33 | izq. | Salida | Relé 3, bomba | IN3 | Dupont H-H |
-| 25 | izq. | Salida | Relé 2, ventilador | IN2 | Dupont H-H |
-| 26 | izq. | Salida | Relé 1, foco interior | IN1 | Dupont H-H |
-| 27 | izq. | Entrada + interrupción | PIR, `PIN_PIR` | OUT del PIR | Dupont H-H + extensión |
-| GND | izq. | — | Tierra común | Riel GND de adelante | Dupont M-H |
-| 23 | der. | Salida | Relé 4, foco exterior | IN4 | Dupont H-H |
-| 18 | der. | Salida | Buzzer, `PIN_BUZZER` (ALTO = suena) | Resistencia de 1 kΩ → base del 2N2222 | Dupont M-H |
-| 4 | der. | Bidireccional | DHT22, `PIN_DHT` | out del DHT22 | Dupont H-H + extensión |
+> **Cableado real (8 nov 2026).** La maqueta se armó con estos pines, probados componente por componente y todos juntos. El ventilador y la bomba usan transistores 2N2222 en lugar de relés, y el sensor de suelo está alimentado siempre. La lista de cables de la sección 3.6 y la maqueta 3D todavía muestran el diseño anterior.
+
+| GPIO | Fila | Dirección | Uso | Conecta a |
+|---|---|---|---|---|
+| 34 | izq. | ADC1_CH6 | Luz, `PIN_LDR` | Nodo del divisor LDR / 10 kΩ |
+| 35 | izq. | ADC1_CH7 | Humedad de suelo, `PIN_SUELO` | Salida analógica del sensor de suelo |
+| 25 | izq. | Salida | Buzzer, `PIN_BUZZER` (ALTO = suena) | 1 kΩ → base del 2N2222 del buzzer |
+| 26 | izq. | Salida | Bomba, `PIN_BOMBA` (ALTO = encendida) | 1 kΩ → base del 2N2222 de la bomba |
+| 27 | izq. | Entrada + interrupción | PIR, `PIN_PIR` | OUT del PIR |
+| GND | izq. | — | Tierra común | GND de 5 V y 12 V |
+| 23 | der. | Salida | Ventilador, `PIN_VENT` (ALTO = encendido) | 1 kΩ → base del 2N2222 del ventilador |
+| 22 | der. | Salida | Relé del foco exterior | IN del relé |
+| 21 | der. | Bidireccional | DHT22, `PIN_DHT` | out del DHT22 |
+| 19 | der. | Salida | Relé del foco interior | IN del relé |
+
+- El ventilador y la bomba llevan un diodo (1N4007 o 1N5819) en paralelo con el motor, con la franja hacia +5 V.
+- Si el sensor de suelo pasa a alimentarse desde un GPIO (por ejemplo 32), se pone ese número en `PIN_SUELO_VCC`.
+- `LDR_SUBE_CON_LUZ` indica si la lectura del divisor sube con más luz (`true`) o baja (`false`).
 
 **Reglas:**
 - Las lecturas analógicas van solo en ADC1 (32 a 39), porque ADC2 no funciona con WiFi.
@@ -181,10 +188,11 @@ Fila derecha: GND, 23, 22, TX, RX, 21, GND, 19, 18, 5, 17, 16, 4, 0, 2, 15, SD1,
 
 | Canal | Entrada | COM ← | NO → |
 |---|---|---|---|
-| 1 | GPIO 26 | Bus 12 V | + del foco interior |
-| 2 | GPIO 25 | Bus 5 V motores | + (rojo) del ventilador |
-| 3 | GPIO 33 | Bus 5 V motores | + (rojo) de la bomba |
-| 4 | GPIO 23 | Puente desde COM1 (12 V) | + del foco exterior |
+| Foco interior (K1) | GPIO 19 → IN1 | Un cable del enchufe (120 V) | Cable del foco interior |
+| Foco exterior | GPIO 22 → IN del canal | Un cable del enchufe (120 V) | Cable del foco exterior |
+
+- Los focos van en **NO**: si el ESP32 se apaga o se reinicia, quedan apagados. En **NC** se encenderían solos.
+- El orden de los tres tornillos (NO, COM, NC) viene dibujado junto a la bornera; COM es el del medio.
 
 ## 3.6 Lista completa de cables
 
