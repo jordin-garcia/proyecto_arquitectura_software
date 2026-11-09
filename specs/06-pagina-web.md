@@ -212,7 +212,8 @@ Si `servidorUrl` está vacío, `local.js` entiende órdenes sencillas: encender 
 - no se usa `backdrop-filter`: la cabecera, las pestañas y los avisos tienen fondo opaco;
 - el fondo de partículas dibuja a 1× con 50 partículas como máximo;
 - el lienzo solo se rehace si cambia el ancho, no cuando la barra de direcciones cambia la altura al deslizar;
-- se quita el destello que recorre el borde de los paneles.
+- se quita el destello que recorre el borde de los paneles;
+- los íconos que se redibujan con los datos del ESP32 (dispositivos, paneles, escenas, conexión) y el logo no usan `filter: drop-shadow`: en Chrome de Android se pintaba como un rectángulo negro fijo sobre el foco encendido.
 
 ## 6.5 Ciclo de vida
 

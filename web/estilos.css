@@ -1388,4 +1388,9 @@ body.listo .lateral > button:nth-child(6) { animation-delay: .25s; } body.listo 
   .conversacion, .velo, .aviso, .lateral, .tabs-movil, .dialogo::backdrop { backdrop-filter: none; }
   .panel::after { display: none; animation: none; }
   .mia-energia { mix-blend-mode: normal; }
+  /* filter: drop-shadow en iconos que se redibujan con los datos del ESP32 se
+     pintaba como un rectangulo negro en Chrome de Android al deslizar o tocar.
+     Los iconos conservan su color; las tarjetas, su borde iluminado. */
+  .disp .d-icono, .logo-casa, .panel-icono .icono, .escena .icono,
+  .esp-item .icono, .pie-estado .icono { filter: none !important; }
 }
